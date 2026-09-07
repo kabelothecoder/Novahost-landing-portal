@@ -1,0 +1,40 @@
+# --- dependencies ---
+**/node_modules/
+**/.pnp
+**/.pnp.*
+
+# --- build output ---
+**/dist/
+**/dist-ssr/
+**/.next/
+**/out/
+**/build/
+**/.turbo/
+
+# --- env / secrets (never upload these) ---
+**/.env
+**/.env.*
+!**/.env.example
+
+# --- vercel ---
+**/.vercel/
+
+# --- parked / stale git repos ---
+**/.git_parked/
+
+# --- editor / claude local ---
+.claude/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# --- logs ---
+**/*.log
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*

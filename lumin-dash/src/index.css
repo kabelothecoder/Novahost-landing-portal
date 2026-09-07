@@ -1,0 +1,291 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * NovaHost portal design system.
+ *
+ * Two rules govern everything below:
+ *
+ *   1. Surfaces are neutral. Every background, border and text colour is a pure
+ *      grey (zero saturation). Depth comes from lightness steps and 1px
+ *      borders, never from gradients, glows or blur.
+ *   2. Colour is semantic. The blue accent marks the one primary action on a
+ *      screen; green and red mean long and short. Nothing is coloured for
+ *      decoration, so when something is coloured it means something.
+ *
+ * Both themes are first-class: no component may hardcode a colour, because
+ * anything hardcoded is broken in the other theme.
+ */
+
+@layer base {
+  :root {
+    /* Surfaces — neutral greys, lightest to darkest */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+
+    /* Recessed surfaces — table headers, inset panels, hover states */
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+
+    --accent: 0 0% 94%;
+    --accent-foreground: 0 0% 9%;
+
+    /* Brand accent — reserved for the single primary action per screen */
+    --primary: 212 80% 45%;
+    --primary-foreground: 0 0% 100%;
+    /* Tint for selected nav rows and focus surfaces */
+    --primary-muted: 212 80% 96%;
+    /* Hover state for accent-coloured text/links. Named "glow" for backwards
+       compatibility with pages not yet converted; it no longer glows. */
+    --primary-glow: 212 80% 38%;
+
+    /* Semantic — direction of a trade. Never decorative. */
+    --long: 142 68% 32%;
+    --long-foreground: 0 0% 100%;
+    --short: 0 70% 45%;
+    --short-foreground: 0 0% 100%;
+
+    /* Semantic — state of a thing */
+    --success: 142 68% 32%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32 85% 42%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 212 80% 45%;
+
+    /* Elevation — barely there. Borders do most of the separating. */
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.04);
+    --shadow-card: 0 1px 3px 0 hsl(0 0% 0% / 0.05);
+    --shadow-popover: 0 4px 16px -2px hsl(0 0% 0% / 0.10), 0 2px 6px -2px hsl(0 0% 0% / 0.06);
+
+    /* Glass material — see the .glass rule below for when it may be used. */
+    --glass-bg: rgba(255, 255, 255, 0.66);
+    --glass-bg-strong: rgba(255, 255, 255, 0.86);
+    --glass-border: rgba(255, 255, 255, 0.7);
+    --glass-highlight: rgba(255, 255, 255, 0.9);
+    --shadow-glass: 0 8px 32px -8px rgba(0, 0, 0, 0.16);
+
+    /* Ambient ground the chrome is translucent against. Static: the previous
+       version panned for 30s on a loop behind every page. */
+    --backdrop: radial-gradient(
+        60rem 40rem at 12% -10%,
+        hsl(212 80% 45% / 0.07),
+        transparent 60%
+      ),
+      radial-gradient(50rem 34rem at 100% 0%, hsl(262 70% 55% / 0.05), transparent 55%);
+
+    --radius: 0.5rem;
+
+    /* Sidebar reads as chrome: flush white, separated by a hairline only */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 32%;
+    --sidebar-primary: 212 80% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 95%;
+    --sidebar-accent-foreground: 0 0% 9%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 212 80% 45%;
+  }
+
+  .dark {
+    /* Neutral near-black. No blue tint — the trading desks it sits beside
+       (Binance, Kraken, Coinbase) are all achromatic, and a tinted grey makes
+       real green/red P&L harder to read. */
+    --background: 0 0% 7%;
+    --foreground: 0 0% 96%;
+
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 96%;
+
+    --popover: 0 0% 11%;
+    --popover-foreground: 0 0% 96%;
+
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 60%;
+
+    --secondary: 0 0% 13%;
+    --secondary-foreground: 0 0% 96%;
+
+    --accent: 0 0% 16%;
+    --accent-foreground: 0 0% 96%;
+
+    --primary: 212 85% 62%;
+    --primary-foreground: 0 0% 7%;
+    --primary-muted: 212 60% 16%;
+    --primary-glow: 212 85% 72%;
+
+    --long: 142 66% 50%;
+    --long-foreground: 0 0% 7%;
+    --short: 0 82% 62%;
+    --short-foreground: 0 0% 7%;
+
+    --success: 142 66% 50%;
+    --success-foreground: 0 0% 7%;
+    --warning: 38 92% 58%;
+    --warning-foreground: 0 0% 7%;
+    --destructive: 0 82% 62%;
+    --destructive-foreground: 0 0% 7%;
+
+    --border: 0 0% 16%;
+    --input: 0 0% 18%;
+    --ring: 212 85% 62%;
+
+    /* On dark, shadows read as smudges. Borders carry the separation. */
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.4);
+    --shadow-card: 0 1px 3px 0 hsl(0 0% 0% / 0.5);
+    --shadow-popover: 0 8px 24px -4px hsl(0 0% 0% / 0.7);
+
+    /* On dark the panel is a dark veil, not a white one. A white film over a
+       near-black ground greys the whole surface and kills the art underneath. */
+    --glass-bg: rgba(24, 24, 24, 0.55);
+    --glass-bg-strong: rgba(18, 18, 18, 0.86);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-highlight: rgba(255, 255, 255, 0.16);
+    --shadow-glass: 0 8px 32px -8px rgba(0, 0, 0, 0.6);
+
+    --backdrop: radial-gradient(
+        60rem 40rem at 12% -10%,
+        hsl(212 85% 62% / 0.10),
+        transparent 60%
+      ),
+      radial-gradient(50rem 34rem at 100% 0%, hsl(262 70% 60% / 0.07), transparent 55%);
+
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 63%;
+    --sidebar-primary: 212 85% 62%;
+    --sidebar-primary-foreground: 0 0% 7%;
+    --sidebar-accent: 0 0% 13%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 14%;
+    --sidebar-ring: 212 85% 62%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    /* Layered over the background colour, not replacing it — a transparent body
+       would borrow whatever the host paints. Fixed so it does not slide under
+       scrolling content. */
+    background-image: var(--backdrop);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Money, lot sizes and counts must not reflow as digits change. */
+  table,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /*
+   * Glass is a material, not a decoration.
+   *
+   * The rule is the one the Android app already follows (CLAUDE.md §4): glass
+   * over art, flat card over a flat ground. A translucent panel earns its blur
+   * only when there is something behind it worth half-seeing — mentor art, the
+   * page an overlay covers, the ambient backdrop the chrome floats on. Over a
+   * plain surface it is a card that costs contrast for nothing, which is what
+   * the whole portal used to be.
+   *
+   * So: `.glass` on the licence card and the chrome. Data cards, tables and
+   * numbers stay flat.
+   */
+  .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-glass), inset 0 1px 0 var(--glass-highlight);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+  }
+
+  /*
+   * For surfaces that must stay readable over arbitrary content — dialogs,
+   * popovers, menus. Same material, far less transparent, because a menu you
+   * can read the page through is a menu you cannot read.
+   */
+  .glass-overlay {
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-popover);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+  }
+
+  /*
+   * Compatibility shims for pages not yet converted. `glass-modal` maps to the
+   * real overlay material; `glass-card` stays deliberately flat, because the
+   * places it is used are plain data panels on plain grounds — exactly the case
+   * the rule above says must not be glass.
+   */
+  .glass-card,
+  .glass-panel {
+    @apply bg-card border border-border shadow-card;
+  }
+
+  .glass-modal {
+    @apply glass-overlay;
+  }
+
+  .glass-btn {
+    @apply bg-secondary text-secondary-foreground border border-border hover:bg-accent transition-colors;
+  }
+
+  /* Was a 30s panning radial-gradient wash. The ambient ground now lives on
+     `body` as a static layer instead. */
+  .animated-bg {
+    display: none;
+  }
+
+  /* Section label above a group of rows — the small uppercase key used by
+     Supabase, WorkOS and Grok to segment a dense sidebar or page. */
+  .section-label {
+    @apply text-[11px] font-medium uppercase tracking-wider text-muted-foreground;
+  }
+}
+
+@layer utilities {
+  /*
+   * `animate-fade-in` and `animate-enter` are referenced in 14 files but the
+   * keyframes were never defined, so they have always been no-ops. Defining
+   * them as one short opacity fade makes page transitions deliberate without
+   * reintroducing per-element staggered entrances.
+   */
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .animate-fade-in,
+  .animate-enter {
+    animation: fade-in 150ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in,
+    .animate-enter {
+      animation: none;
+    }
+  }
+}

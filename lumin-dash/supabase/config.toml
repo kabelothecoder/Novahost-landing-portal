@@ -1,0 +1,16 @@
+project_id = "epulmnfbxjmaimefhofp"
+
+[functions.validate-license]
+verify_jwt = false
+
+[functions.manage-eas]
+verify_jwt = true
+
+[functions.generate-license]
+verify_jwt = true
+
+[functions.admin-licenses]
+verify_jwt = true
+
+[functions.admin-grant-access]
+verify_jwt = true
