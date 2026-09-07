@@ -1,14 +1,15 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
 import { PixelHero } from "@/components/ui/pixel-perfect-hero";
 import { AnimatedText } from "@/components/ui/animated-shiny-text";
 import { MagneticText } from "@/components/ui/morphing-cursor";
 
-export default function LandingPage() {
-  const router = useRouter();
+// The mentor portal is a separate Vercel project. Swap this for the custom
+// domain (e.g. https://portal.novahost.com) once it is attached.
+const PORTAL_URL = "https://novahost-portal.vercel.app";
 
+export default function LandingPage() {
   return (
     <main className="min-h-screen bg-[#121212] text-white selection:bg-indigo-500/30">
       <PixelHero
@@ -18,7 +19,7 @@ export default function LandingPage() {
         primaryActionText="Mentor Login"
         secondaryActionText="Download App .APK"
         onPrimaryClick={() => {
-          router.push("/auth/login");
+          window.location.href = PORTAL_URL;
         }}
         onSecondaryClick={() => {
           // Trigger APK download or route to download section
