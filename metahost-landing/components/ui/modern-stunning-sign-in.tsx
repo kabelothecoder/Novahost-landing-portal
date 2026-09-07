@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { ReactNode, useState, FormEvent } from "react";
 import { novaHost } from "@/lib/novahost";

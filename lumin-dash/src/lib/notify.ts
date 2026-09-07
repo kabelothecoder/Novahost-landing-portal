@@ -1,4 +1,4 @@
-﻿export function playNotificationSound() {
+export function playNotificationSound() {
   try {
     const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
     const ctx = new AudioCtx();
