@@ -79,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Force page refresh for clean state
-      window.location.href = `${import.meta.env.BASE_URL}login`;
+      window.location.href = '/login';
     } catch (error) {
       console.error('Error signing out:', error);
       throw error;

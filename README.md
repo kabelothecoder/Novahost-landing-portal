@@ -1,30 +1,30 @@
 # NovaHost web
 
-Monorepo for the two public web surfaces. One domain, path-routed:
+npm-workspace monorepo. Origin:
+`github.com/kabelothecoder/Novahost-landing-portal`.
 
-| Path | App | Stack | Deploy |
+| Dir | App | Stack | Status |
 | --- | --- | --- | --- |
-| `/` (apex) | `apps/landing` | Next.js 16, React 19, Tailwind 4 | Vercel project, root `apps/landing` |
-| `/mentor/*` | `apps/portal` | Vite 5, React 18, Tailwind 3, react-router 6 | Vercel project, root `apps/portal`, no domain — reached via the landing's rewrite |
-| `/super-admin/*` | `apps/landing` | (same as landing) | platform-owner console, part of the landing app |
+| `apps/portal` | Mentor portal **+ its own marketing page** | Vite 5, React 18, Tailwind 3, react-router 6 | **Deployed** — serves `novahost.co` at the root (`/` = `src/pages/Landing.tsx`, `/login`, `/generate`, the dashboard, …) |
+| `apps/landing` | Standalone marketing hero | Next.js 16, React 19, Tailwind 4 | **In the repo, not deployed.** Kept for a possible future front page. |
+| `packages/shared` | `@novahost/shared` — marketing brand tokens, framework-agnostic helpers, generated Supabase DB types | — | — |
 
-`packages/shared` (`@novahost/shared`) — marketing brand tokens + framework-agnostic
-helpers + Supabase-generated DB types. Not for portal functional UI.
+Both apps talk to one Supabase project (`epulmnfbxjmaimefhofp`). Env var names
+differ by framework: `VITE_SUPABASE_*` (portal) vs `NEXT_PUBLIC_SUPABASE_*`
+(landing).
 
-Both apps talk to one Supabase project (`epulmnfbxjmaimefhofp`). Env var names differ
-by framework: `NEXT_PUBLIC_SUPABASE_*` (landing) vs `VITE_SUPABASE_*` (portal).
+`apps/portal/vite.config.ts` sets `resolve.dedupe: ["react","react-dom"]` — the
+workspace also has React 19 (for the landing) hoisted at the root; without dedupe
+the portal picks up a second React and hooks throw. Don't remove it.
 
 ## Develop
 
 ```bash
-npm install            # one lockfile at the root (npm workspaces)
-npm run dev:landing    # Next on :3000
-npm run dev:portal     # Vite on :8080
+npm install            # one lockfile at the root
+npm run dev:portal     # Vite on :8080  — the deployed app
+npm run dev:landing    # Next on :3000  — not deployed
 npm run build          # builds both
 ```
 
-## Repo
-
-Origin: `github.com/kabelothecoder/Novahost-landing-portal`. This folder sits inside
-the `Nova Edge` working tree but is its own git repo; the parent repo does not track
-it (pre-split history is in `Nova-Edge.git` through `abb8b07`).
+This folder sits inside the `Nova Edge` working tree but is its own git repo; the
+parent repo does not track it (pre-split history is in `Nova-Edge.git`).

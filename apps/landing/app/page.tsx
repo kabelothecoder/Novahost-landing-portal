@@ -5,10 +5,10 @@ import { PixelHero } from "@/components/ui/pixel-perfect-hero";
 import { AnimatedText } from "@/components/ui/animated-shiny-text";
 import { MagneticText } from "@/components/ui/morphing-cursor";
 
-// The mentor portal is served on this same domain under /mentor/* (a Vercel
-// multi-zone rewrite in next.config.ts to the portal's own project). Trailing
-// slash: that's the portal's base path.
-const PORTAL_URL = "/mentor/";
+// This Next landing is NOT currently deployed — novahost.co serves the portal
+// (apps/portal) directly, and the portal has its own marketing page. If this
+// app is ever put back in front, point PORTAL_URL at wherever the portal lives.
+const PORTAL_URL = "https://novahost.co";
 
 // Signed Android release in the Supabase `downloads` bucket — same file the
 // portal's own landing serves. Override with NEXT_PUBLIC_APK_URL in Vercel to
