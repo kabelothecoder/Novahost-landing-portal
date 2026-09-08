@@ -17,6 +17,8 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Workspace package, resolved straight to source (no build step).
+      "@novahost/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
     },
   },
 }));

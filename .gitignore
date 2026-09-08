@@ -38,3 +38,7 @@ Thumbs.db
 **/yarn-debug.log*
 **/yarn-error.log*
 **/pnpm-debug.log*
+
+# --- typescript build info ---
+**/*.tsbuildinfo
+**/next-env.d.ts
