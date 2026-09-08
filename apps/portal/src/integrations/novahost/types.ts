@@ -323,6 +323,10 @@ export type Database = {
       }
       profiles: {
         Row: {
+          approval_note: string | null
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           avatar_url: string | null
           created_at: string
           display_name: string | null
@@ -333,6 +337,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_note?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
@@ -343,6 +351,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_note?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null

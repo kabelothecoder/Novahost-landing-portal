@@ -54,6 +54,19 @@ Deno.serve(async (req) => {
     // ownerless robots that the portal (which filters on user_id) could not see.
     const ownerId = userData.user.id;
 
+    // Signing up does not make you a mentor -- an admin has to approve the
+    // account first. The portal hides this page from a pending account, but the
+    // function is reachable directly, so the refusal has to live here too.
+    const { data: approval } = await admin
+      .from('profiles')
+      .select('approval_status')
+      .eq('id', ownerId)
+      .maybeSingle();
+    if (approval?.approval_status !== 'approved') {
+      console.warn(`manage-eas: blocked ${approval?.approval_status ?? 'unknown'} account ${ownerId}`);
+      return new Response(JSON.stringify({ error: 'Your account is pending approval.' }), { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    }
+
     const { action, name } = await req.json().catch(() => ({}));
 
     if (action !== 'create') {

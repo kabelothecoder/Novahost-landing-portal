@@ -31,25 +31,29 @@ import Privacy from "@/pages/Privacy";
 import Refunds from "@/pages/Refunds";
 import Contact from "@/pages/Contact";
 import AdminAccess from "@/pages/AdminAccess";
+import AdminApprovals from "@/pages/AdminApprovals";
+import PendingApproval from "@/pages/PendingApproval";
 
 const queryClient = new QueryClient();
 
+const RouteSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center">
+      <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p className="text-muted-foreground">Loading...</p>
+    </div>
+  </div>
+);
+
 // Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, approvalStatus, approvalLoading } = useAuth();
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <RouteSpinner />;
   }
-  
+
   if (!user) {
     // A visitor arriving at the root should meet the landing page, not a login
     // wall. Deeper pages still bounce to /login, since there is nothing to
@@ -58,6 +62,21 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       return <Landing />;
     }
     return <Navigate to="/login" replace />;
+  }
+
+  // Signed in is not the same as approved. Every new signup starts `pending`
+  // and gets this screen instead of whatever it asked for -- rendered in place
+  // rather than redirected, so the URL survives and the mentor lands where they
+  // were headed once approval comes through.
+  //
+  // This is the visible half of the gate only. The mentor edge functions run
+  // the same check server-side, because this one is just JavaScript.
+  if (approvalLoading) {
+    return <RouteSpinner />;
+  }
+
+  if (approvalStatus !== "approved") {
+    return <PendingApproval />;
   }
 
   return <>{children}</>;
@@ -127,6 +146,7 @@ function AppRoutes() {
         <Route path="dashboard/ea/:id/manage" element={<ManageEA />} />
         <Route path="dispatcher/licenses" element={<LicenseManagement />} />
         <Route path="admin/access" element={<AdminAccess />} />
+        <Route path="admin/approvals" element={<AdminApprovals />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

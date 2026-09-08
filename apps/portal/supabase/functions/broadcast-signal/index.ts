@@ -33,6 +33,23 @@ serve(async (req: Request) => {
       })
     }
 
+    // Signing up does not make you a mentor -- an admin has to approve the
+    // account first. This sits ahead of the ownership check below because a
+    // pending account should be refused even if it somehow owns a bot.
+    const { data: approval } = await novaHost
+      .from('profiles')
+      .select('approval_status')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (approval?.approval_status !== 'approved') {
+      console.warn(`broadcast-signal: blocked ${approval?.approval_status ?? 'unknown'} account ${user.id}`)
+      return new Response(JSON.stringify({ error: 'Your account is pending approval.' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     const body = await req.json()
     const {
       ea_id, pair, lot, side, type, sl, tp, signal_id, adminBalance,

@@ -180,8 +180,9 @@ export default function Register() {
       if (error) throw error;
 
       toast({
-        title: "Account created",
-        description: "Check your inbox to verify your email.",
+        title: "Account created — pending approval",
+        description:
+          "You won't be able to sign in until an admin approves your account. We'll email you when it's live.",
       });
       navigate("/login");
     } catch (error) {
@@ -207,6 +208,12 @@ export default function Register() {
           <h1 className="text-lg font-semibold">Create your account</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Set up your mentor portal and start issuing licences.
+          </p>
+          {/* Said here rather than only after submitting, so nobody fills in ten
+              fields expecting to be trading five minutes later. */}
+          <p className="mt-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            Every signup is reviewed by hand. You won't be able to sign in until
+            we approve your account — the social links below are what we review.
           </p>
         </div>
 

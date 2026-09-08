@@ -1,12 +1,25 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { novaHost } from '@/integrations/novahost/client';
 import { playNotificationSound } from '@/lib/notify';
+
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  /**
+   * `profiles.approval_status` for the signed-in account, or null when nobody
+   * is signed in. New signups start `pending` and cannot use the portal until
+   * an admin approves them.
+   *
+   * Null while it is still being fetched -- read `approvalLoading` rather than
+   * treating null as "not approved", or the gate flashes on every refresh.
+   */
+  approvalStatus: ApprovalStatus | null;
+  approvalLoading: boolean;
+  refreshApproval: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -41,6 +54,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus | null>(null);
+  const [approvalLoading, setApprovalLoading] = useState(true);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -64,6 +79,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const userId = user?.id ?? null;
+
+  /**
+   * The "Users view their own profile" RLS policy lets a pending account read
+   * its own row, which is what makes the pending screen possible at all. The
+   * `protect_approval_status` trigger is what stops it writing one.
+   */
+  const fetchApproval = useCallback(async () => {
+    if (!userId) {
+      setApprovalStatus(null);
+      setApprovalLoading(false);
+      return;
+    }
+
+    setApprovalLoading(true);
+    const { data, error } = await novaHost
+      .from('profiles')
+      .select('approval_status')
+      .eq('id', userId)
+      .maybeSingle();
+
+    // Fail closed. A read error here means we cannot prove the account is
+    // approved, and letting it through would defeat the gate.
+    if (error) {
+      console.error('Could not read approval status:', error);
+      setApprovalStatus('pending');
+    } else {
+      setApprovalStatus((data?.approval_status ?? 'pending') as ApprovalStatus);
+    }
+    setApprovalLoading(false);
+  }, [userId]);
+
+  useEffect(() => {
+    if (loading) return;
+    void fetchApproval();
+  }, [loading, fetchApproval]);
 
   const signOut = async () => {
     try {
@@ -90,6 +142,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     session,
     loading,
+    approvalStatus,
+    approvalLoading,
+    refreshApproval: fetchApproval,
     signOut,
   };
 

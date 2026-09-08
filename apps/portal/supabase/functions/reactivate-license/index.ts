@@ -34,6 +34,19 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized', details: userErr?.message }), { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
+    // Signing up does not make you a mentor -- an admin has to approve the
+    // account first. The portal hides this page from a pending account, but the
+    // function is reachable directly, so the refusal has to live here too.
+    const { data: approval } = await novaHostAdmin
+      .from('profiles')
+      .select('approval_status')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (approval?.approval_status !== 'approved') {
+      console.warn(`reactivate-license: blocked ${approval?.approval_status ?? 'unknown'} account ${user.id}`);
+      return new Response(JSON.stringify({ error: 'Your account is pending approval.' }), { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    }
+
     const { license_id } = await req.json().catch(() => ({}));
     if (!license_id) {
        return new Response(JSON.stringify({ error: 'Missing license_id' }), { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } });

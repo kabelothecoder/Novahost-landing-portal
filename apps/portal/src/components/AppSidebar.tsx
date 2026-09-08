@@ -11,6 +11,7 @@ import {
   Zap,
   Shield,
   ShieldCheck,
+  UserCheck,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -69,7 +70,10 @@ const navGroups: Array<{
 // edge function both re-check server-side, so this is UI tidiness, not a gate.
 const adminGroup = {
   label: "Admin",
-  items: [{ title: "Comp Access", url: "/admin/access", icon: ShieldCheck }],
+  items: [
+    { title: "Approvals", url: "/admin/approvals", icon: UserCheck },
+    { title: "Comp Access", url: "/admin/access", icon: ShieldCheck },
+  ],
 };
 
 export function AppSidebar() {

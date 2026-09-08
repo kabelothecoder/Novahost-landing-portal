@@ -10,6 +10,41 @@ import { toast } from "@/hooks/use-toast";
 import { playWelcomeSwoosh } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
+const PENDING_MESSAGE =
+  "Your account is pending approval. Every mentor signup is reviewed by hand — we'll email you as soon as yours is live.";
+const REJECTED_MESSAGE =
+  "Your account was not approved, so you can't sign in. Reply to your signup email if you think that's a mistake.";
+
+/**
+ * The reason this account may not use the portal, or null when it may.
+ *
+ * Signing in is not the same as being let in: every signup starts `pending` and
+ * an admin has to approve it. Reading the caller's own row is what the
+ * "Users view their own profile" RLS policy allows; writing it is what the
+ * `protect_approval_status` trigger refuses.
+ *
+ * Fails closed. A status we cannot read is treated as not approved, because
+ * letting it through is the one outcome the gate exists to prevent.
+ */
+async function approvalRefusal(userId: string | undefined): Promise<string | null> {
+  if (!userId) return PENDING_MESSAGE;
+
+  const { data, error } = await novaHost
+    .from("profiles")
+    .select("approval_status")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Could not read approval status:", error);
+    return PENDING_MESSAGE;
+  }
+
+  const status = data?.approval_status ?? "pending";
+  if (status === "approved") return null;
+  return status === "rejected" ? REJECTED_MESSAGE : PENDING_MESSAGE;
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -38,12 +73,25 @@ export default function Login() {
 
     setIsLoading(true);
     try {
-      const { error } = await novaHost.auth.signInWithPassword({
+      const { data, error } = await novaHost.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
 
       if (error) throw error;
+
+      // The credentials were right, which is not the same as being allowed in.
+      // Throw the session away again unless an admin has approved the account,
+      // so an unapproved mentor never reaches the portal at all.
+      //
+      // This is the visible half only. The mentor edge functions run the same
+      // check server-side, so even the momentary token cannot do anything.
+      const refusal = await approvalRefusal(data.user?.id);
+      if (refusal) {
+        await novaHost.auth.signOut();
+        setErrors({ form: refusal });
+        return;
+      }
 
       toast({ title: "Success", description: "Welcome back!" });
       playWelcomeSwoosh();
@@ -94,7 +142,9 @@ export default function Login() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
+    // Clear the field's own error and any form-level refusal, which no longer
+    // describes the credentials now in the box.
+    setErrors((prev) => ({ ...prev, [field]: "", form: "" }));
   };
 
   return (
@@ -176,6 +226,15 @@ export default function Login() {
               </p>
             )}
           </div>
+
+          {errors.form && (
+            <div
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+            >
+              {errors.form}
+            </div>
+          )}
 
           <Button type="submit" disabled={isLoading} className="w-full">
             {isLoading ? "Signing in…" : "Sign in"}
