@@ -39,11 +39,11 @@ export default function Contact() {
           it fails or you have used up your self-service moves.
         </li>
         <li>
-          <strong>Refund query?</strong> See the <a href="/refunds">Refund Policy</a>, then email us
+          <strong>Refund query?</strong> See the <a href={`${import.meta.env.BASE_URL}refunds`}>Refund Policy</a>, then email us
           with the details listed there.
         </li>
         <li>
-          <strong>Privacy request?</strong> See the <a href="/privacy">Privacy Policy</a>; send
+          <strong>Privacy request?</strong> See the <a href={`${import.meta.env.BASE_URL}privacy`}>Privacy Policy</a>; send
           access, correction, or deletion requests to the same address.
         </li>
       </ul>
@@ -51,7 +51,7 @@ export default function Contact() {
       <h2>Hosting a robot</h2>
       <p>
         Mentors who want to host a robot and issue keys to students can register on the{" "}
-        <a href="/register">portal</a> or email us with &ldquo;Hosting&rdquo; in the subject.
+        <a href={`${import.meta.env.BASE_URL}register`}>portal</a> or email us with &ldquo;Hosting&rdquo; in the subject.
       </p>
 
       <h2>Business details</h2>

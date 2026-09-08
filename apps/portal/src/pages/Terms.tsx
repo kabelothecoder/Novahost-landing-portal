@@ -68,7 +68,7 @@ export default function Terms() {
         amount charged. We never see or store your card details. &ldquo;Lifetime access&rdquo; means
         for as long as we operate the service &mdash; it is not a guarantee that the service will run
         indefinitely (see section&nbsp;9). Refunds are governed by our{" "}
-        <a href="/refunds">Refund Policy</a>.
+        <a href={`${import.meta.env.BASE_URL}refunds`}>Refund Policy</a>.
       </p>
 
       <h2>5. Acceptable use</h2>
@@ -183,7 +183,7 @@ export default function Terms() {
       <h2>15. Contact</h2>
       <p>
         Questions about these terms: <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>, or see
-        the <a href="/contact">Contact</a> page.
+        the <a href={`${import.meta.env.BASE_URL}contact`}>Contact</a> page.
       </p>
     </LegalLayout>
   );

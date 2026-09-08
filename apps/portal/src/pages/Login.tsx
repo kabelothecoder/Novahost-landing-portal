@@ -72,7 +72,7 @@ export default function Login() {
     setIsResetLoading(true);
     try {
       const { error } = await novaHost.auth.resetPasswordForEmail(formData.email, {
-        redirectTo: `${window.location.origin}/update-password`,
+        redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}update-password`,
       });
 
       if (error) throw error;

@@ -4,6 +4,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/mentor", "destination": "/mentor/index.html" },
+    { "source": "/mentor/(.*)", "destination": "/mentor/index.html" }
   ]
 }

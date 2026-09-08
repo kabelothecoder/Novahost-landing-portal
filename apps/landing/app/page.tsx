@@ -5,10 +5,9 @@ import { PixelHero } from "@/components/ui/pixel-perfect-hero";
 import { AnimatedText } from "@/components/ui/animated-shiny-text";
 import { MagneticText } from "@/components/ui/morphing-cursor";
 
-// The mentor portal is a separate Vercel project. This is its public
-// auto-URL. Swap for https://novahost-portal.vercel.app once Deployment
-// Protection is relaxed, or for the custom domain once it is attached.
-const PORTAL_URL = "https://lumin-dash-6c2x.vercel.app";
+// The mentor portal is served on this same domain under /mentor/* (a Vercel
+// multi-zone rewrite in next.config.ts to the portal's own project).
+const PORTAL_URL = "/mentor";
 
 export default function LandingPage() {
   return (

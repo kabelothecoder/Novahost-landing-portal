@@ -158,7 +158,7 @@ export default function Register() {
 
     setIsLoading(true);
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = `${window.location.origin}${import.meta.env.BASE_URL}`;
 
       const { error } = await novaHost.auth.signUp({
         email: formData.email,

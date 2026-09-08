@@ -141,7 +141,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <Router>
+            <Router basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <AppRoutes />
             </Router>
           </TooltipProvider>
