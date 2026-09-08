@@ -9,6 +9,13 @@ import { MagneticText } from "@/components/ui/morphing-cursor";
 // multi-zone rewrite in next.config.ts to the portal's own project).
 const PORTAL_URL = "/mentor";
 
+// Signed Android release in the Supabase `downloads` bucket — same file the
+// portal's own landing serves. Override with NEXT_PUBLIC_APK_URL in Vercel to
+// move it without a code change.
+const APK_URL =
+  process.env.NEXT_PUBLIC_APK_URL ??
+  "https://epulmnfbxjmaimefhofp.supabase.co/storage/v1/object/public/downloads/novahost.apk";
+
 export default function LandingPage() {
   return (
     <main className="min-h-screen bg-[#121212] text-white selection:bg-indigo-500/30">
@@ -22,8 +29,7 @@ export default function LandingPage() {
           window.location.href = PORTAL_URL;
         }}
         onSecondaryClick={() => {
-          // Trigger APK download or route to download section
-          window.location.href = "/downloads/novahost-app.apk";
+          window.location.href = APK_URL;
         }}
       />
     </main>
