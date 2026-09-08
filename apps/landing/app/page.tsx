@@ -6,8 +6,9 @@ import { AnimatedText } from "@/components/ui/animated-shiny-text";
 import { MagneticText } from "@/components/ui/morphing-cursor";
 
 // The mentor portal is served on this same domain under /mentor/* (a Vercel
-// multi-zone rewrite in next.config.ts to the portal's own project).
-const PORTAL_URL = "/mentor";
+// multi-zone rewrite in next.config.ts to the portal's own project). Trailing
+// slash: that's the portal's base path.
+const PORTAL_URL = "/mentor/";
 
 // Signed Android release in the Supabase `downloads` bucket — same file the
 // portal's own landing serves. Override with NEXT_PUBLIC_APK_URL in Vercel to
