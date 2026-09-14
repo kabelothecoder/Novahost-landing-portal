@@ -1,0 +1,78 @@
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AdminAuthProvider, useAdminAuth } from "@/contexts/AdminAuthContext";
+import { AdminShell } from "@/components/AdminShell";
+import Login from "@/pages/Login";
+import Overview from "@/pages/Overview";
+import Revenue from "@/pages/Revenue";
+import Payments from "@/pages/Payments";
+import Subscriptions from "@/pages/Subscriptions";
+import Approvals from "@/pages/Approvals";
+import CompAccess from "@/pages/CompAccess";
+import Directory from "@/pages/Directory";
+import Licences from "@/pages/Licences";
+import Signals from "@/pages/Signals";
+
+function Spinner() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  );
+}
+
+/**
+ * The whole console behind one gate.
+ *
+ * `isAdmin === null` means we have not finished asking, and rendering the login
+ * screen in that gap would flash it at an admin on every refresh — so hold the
+ * spinner until the answer is a real boolean.
+ *
+ * The gate itself is cosmetic. Every page's data comes from an edge function
+ * that re-checks `admin_users` on the service role, so deleting this component
+ * in devtools buys a determined visitor a set of empty tables and a row of 403s.
+ */
+function Gate() {
+  const { user, loading, isAdmin, adminLoading } = useAdminAuth();
+
+  if (loading) return <Spinner />;
+  if (!user) return <Login />;
+  if (adminLoading || isAdmin === null) return <Spinner />;
+  if (!isAdmin) return <Login />;
+
+  return (
+    <Routes>
+      <Route element={<AdminShell />}>
+        <Route path="/" element={<Overview />} />
+        <Route path="/revenue" element={<Revenue />} />
+        <Route path="/payments" element={<Payments />} />
+        <Route path="/subscriptions" element={<Subscriptions />} />
+        <Route path="/approvals" element={<Approvals />} />
+        <Route path="/comp-access" element={<CompAccess />} />
+        <Route path="/directory" element={<Directory />} />
+        <Route path="/licences" element={<Licences />} />
+        <Route path="/signals" element={<Signals />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    // Dark by default: this is a console someone reads numbers off, often beside
+    // a trading terminal. The toggle is in the header for anyone who disagrees.
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+      <TooltipProvider>
+        <AdminAuthProvider>
+          <BrowserRouter>
+            <Gate />
+          </BrowserRouter>
+          <Toaster />
+        </AdminAuthProvider>
+      </TooltipProvider>
+    </ThemeProvider>
+  );
+}

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,14 +24,11 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import UpdatePassword from "@/pages/UpdatePassword";
 import NotFound from "@/pages/NotFound";
-import Landing from "@/pages/Landing";
 import LicenseManagement from "@/pages/LicenseManagement";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import Refunds from "@/pages/Refunds";
 import Contact from "@/pages/Contact";
-import AdminAccess from "@/pages/AdminAccess";
-import AdminApprovals from "@/pages/AdminApprovals";
 import PendingApproval from "@/pages/PendingApproval";
 
 const queryClient = new QueryClient();
@@ -48,19 +45,16 @@ const RouteSpinner = () => (
 // Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, approvalStatus, approvalLoading } = useAuth();
-  const location = useLocation();
 
   if (loading) {
     return <RouteSpinner />;
   }
 
   if (!user) {
-    // A visitor arriving at the root should meet the landing page, not a login
-    // wall. Deeper pages still bounce to /login, since there is nothing to
-    // market there and the destination is meaningless when signed out.
-    if (location.pathname === "/") {
-      return <Landing />;
-    }
+    // This domain is the mentor portal and nothing else. The marketing site
+    // moved to its own app, so the root no longer has a landing page to fall
+    // back to and a signed-out visitor belongs at the login screen wherever
+    // they arrived.
     return <Navigate to="/login" replace />;
   }
 
@@ -107,7 +101,6 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/landing" element={<Landing />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/refunds" element={<Refunds />} />
@@ -145,8 +138,6 @@ function AppRoutes() {
         <Route path="feedback" element={<Feedback />} />
         <Route path="dashboard/ea/:id/manage" element={<ManageEA />} />
         <Route path="dispatcher/licenses" element={<LicenseManagement />} />
-        <Route path="admin/access" element={<AdminAccess />} />
-        <Route path="admin/approvals" element={<AdminApprovals />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

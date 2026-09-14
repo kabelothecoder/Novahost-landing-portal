@@ -2,7 +2,7 @@
   "name": "novahost-web",
   "version": "0.0.0",
   "private": true,
-  "description": "NovaHost web monorepo — marketing landing (Next.js) + mentor portal (Vite), one domain.",
+  "description": "NovaHost web monorepo — three separately deployed apps: the marketing landing, the mentor portal, and the admin portal.",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -11,9 +11,11 @@
     "dev": "npm run dev --workspace apps/landing",
     "dev:landing": "npm run dev --workspace apps/landing",
     "dev:portal": "npm run dev --workspace apps/portal",
-    "build": "npm run build:landing && npm run build:portal",
+    "dev:admin": "npm run dev --workspace apps/admin",
+    "build": "npm run build:landing && npm run build:portal && npm run build:admin",
     "build:landing": "npm run build --workspace apps/landing",
     "build:portal": "npm run build --workspace apps/portal",
+    "build:admin": "npm run build --workspace apps/admin",
     "lint": "npm run lint --workspaces --if-present"
   }
 }

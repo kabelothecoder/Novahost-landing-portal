@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* One theme. The site is always dark, so the ground is painted here rather
+     than left to the browser to guess from prefers-color-scheme. */
+  body {
+    @apply bg-ground text-ink antialiased;
+    font-family: theme("fontFamily.sans");
+  }
+
+  ::selection {
+    background: #22c9e8;
+    color: #07070e;
+  }
+
+  :focus-visible {
+    outline: 2px solid #22c9e8;
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

@@ -10,12 +10,9 @@ import {
   SlidersHorizontal,
   Zap,
   Shield,
-  ShieldCheck,
-  UserCheck,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useIsAdmin } from "@/hooks/use-is-admin";
 import { cn } from "@/lib/utils";
 
 import {
@@ -66,24 +63,16 @@ const navGroups: Array<{
   },
 ];
 
-// Shown only to accounts in `admin_users` (see useIsAdmin). The page and its
-// edge function both re-check server-side, so this is UI tidiness, not a gate.
-const adminGroup = {
-  label: "Admin",
-  items: [
-    { title: "Approvals", url: "/admin/approvals", icon: UserCheck },
-    { title: "Comp Access", url: "/admin/access", icon: ShieldCheck },
-  ],
-};
-
 export function AppSidebar() {
   const { state } = useSidebar();
   const { pathname } = useLocation();
   const isMobile = useIsMobile();
   const isCollapsed = state === "collapsed" && !isMobile;
-  const { isAdmin } = useIsAdmin();
 
-  const groups = isAdmin ? [...navGroups, adminGroup] : navGroups;
+  // Approvals and comp access used to hang off the bottom of this list for
+  // admin accounts. They moved to the admin console, which is its own app on
+  // its own domain -- a mentor portal has no business rendering them at all.
+  const groups = navGroups;
 
   // The dashboard is the only route that must match exactly; every other entry
   // should stay lit while you are on one of its detail pages.
