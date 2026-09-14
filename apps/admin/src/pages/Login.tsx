@@ -20,7 +20,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
  * which is the correct outcome and says so plainly.
  */
 export default function Login() {
-  const { user, isAdmin, adminLoading, signOut } = useAdminAuth();
+  const { user, isAdmin, adminLoading, adminError, signOut } = useAdminAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -38,7 +38,38 @@ export default function Login() {
     setBusy(false);
   };
 
-  // Signed in, checked, and not an admin.
+  // Signed in, but the check did not come back cleanly. This is NOT the same as
+  // being refused, and saying so matters: the first version of this screen
+  // reported a failed lookup as "you are not an admin", and the account it said
+  // that about had been on the admin list the whole time.
+  if (user && adminError && !adminLoading) {
+    return (
+      <Shell>
+        <div className="flex flex-col items-center text-center">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-warning/10">
+            <ShieldAlert className="h-5 w-5 text-warning" />
+          </span>
+          <h1 className="mt-4 text-[18px] font-semibold">Could not verify your access</h1>
+          <p className="mt-2 max-w-[44ch] text-[13.5px] leading-relaxed text-muted-foreground">
+            You are signed in as <span className="font-medium text-foreground">{user.email}</span>,
+            but the admin check did not complete. This is a fault, not a refusal &mdash; it does not
+            mean your account lacks access.
+          </p>
+          <code className="mt-4 block w-full break-words rounded-md border border-border bg-muted px-3 py-2 text-left font-mono text-[12px]">
+            {adminError}
+          </code>
+          <div className="mt-6 flex gap-2">
+            <Button onClick={() => window.location.reload()}>Try again</Button>
+            <Button variant="outline" onClick={() => void signOut()}>
+              Sign out
+            </Button>
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
+  // Signed in, checked cleanly, and genuinely not on the admin list.
   if (user && isAdmin === false && !adminLoading) {
     return (
       <Shell>
