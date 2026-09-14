@@ -26,10 +26,14 @@ export const APK_URL =
  * It is also the app's ONE install origin, and that is load-bearing rather
  * than tidy: the handset's device id is a random UUID kept in origin-scoped
  * storage, so a second origin means a second identity, a `device_mismatch`,
- * and a user locked out of something they paid for. Whatever this points at
- * must be the only place the app is served.
+ * and a user locked out of something they paid for.
+ *
+ * Which is exactly why it is still a subdomain of the marketing domain and not
+ * somewhere neater. Moving it would strand every handset already installed —
+ * their storage cannot follow — so `app.novahost-ea.app` stays put and this
+ * site links to it. The landing owns the apex; the app owns this subdomain.
  */
-export const IOS_APP_URL = import.meta.env.VITE_IOS_APP_URL || "https://novahost-app.vercel.app";
+export const IOS_APP_URL = import.meta.env.VITE_IOS_APP_URL || "https://app.novahost-ea.app";
 
 /** Marketing prices in Rand. PayFast collects R1 more on the first two to
  *  absorb the card fee — see generate-payfast-checkout. Do not "fix" these to
