@@ -7,17 +7,24 @@
  * value — a missing var should degrade to "correct", never to "undefined".
  */
 
-/** Where the signed Android APK is served from. */
+/**
+ * Where the signed Android APK is served from.
+ *
+ * `||` and not `??`, and this has bitten before: the Vercel project once had
+ * `VITE_APK_URL` set to an empty string, `??` passed `""` straight through as a
+ * legitimate value, and the download button rendered permanently disabled on
+ * the live site. An unset *or blank* override must fall through to the default.
+ */
 export const APK_URL =
-  import.meta.env.VITE_APK_URL ??
+  import.meta.env.VITE_APK_URL ||
   "https://epulmnfbxjmaimefhofp.supabase.co/storage/v1/object/public/downloads/novahost.apk";
 
 /**
  * The iOS app is an installable web app, not an App Store listing. This is the
  * single install origin — a handset that installs from anywhere else gets a
- * second device ID and burns its licence binding.
+ * second device ID and burns its licence binding. Same `||` reasoning as above.
  */
-export const IOS_APP_URL = import.meta.env.VITE_IOS_APP_URL ?? "https://app.novahost-ea.app";
+export const IOS_APP_URL = import.meta.env.VITE_IOS_APP_URL || "https://app.novahost-ea.app";
 
 /**
  * The mentor portal now lives on its own domain. This site markets the app, so
