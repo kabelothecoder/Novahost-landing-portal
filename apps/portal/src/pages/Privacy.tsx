@@ -17,7 +17,7 @@ export default function Privacy() {
       <h3>You give us</h3>
       <ul>
         <li>
-          <strong>Account details</strong> (mentor portal): email address, password (stored only as a
+          <strong>Account details</strong> (provider portal): email address, password (stored only as a
           salted hash by our authentication provider), and any name or phone number you add to your
           profile.
         </li>
@@ -42,7 +42,7 @@ export default function Privacy() {
         </li>
         <li>
           <strong>Service records</strong>: trade and signal-delivery logs (symbol, direction, size,
-          time, outcome), entitlement checks, and a &ldquo;last seen&rdquo; timestamp so a mentor can
+          time, outcome), entitlement checks, and a &ldquo;last seen&rdquo; timestamp so a provider can
           tell whether a device is online.
         </li>
         <li>Basic technical data needed to operate the app and portal, such as error diagnostics.</li>
@@ -105,7 +105,7 @@ export default function Privacy() {
           hosting.
         </li>
         <li>
-          <strong>Vercel</strong> &mdash; hosting for the mentor portal and this website.
+          <strong>Vercel</strong> &mdash; hosting for the provider portal and this website.
         </li>
         <li>
           <strong>PayFast (Payfast (Pty) Ltd)</strong> &mdash; payment processing.
@@ -124,7 +124,7 @@ export default function Privacy() {
         </li>
       </ul>
       <p>
-        If you hold a mentor&rsquo;s licence key, that mentor can see operational information tied to
+        If you hold a robot provider&rsquo;s licence key, that provider can see operational information tied to
         that key &mdash; for example whether your device is online and whether a signal reached it.
         They do not see your broker password.
       </p>

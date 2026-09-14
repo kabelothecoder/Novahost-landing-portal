@@ -70,7 +70,7 @@ export default function Refunds() {
           in the software.
         </li>
         <li>
-          Your mentor ending your arrangement, or your broker account being unavailable. These are
+          Your robot provider ending your arrangement, or your broker account being unavailable. These are
           outside our control.
         </li>
       </ul>

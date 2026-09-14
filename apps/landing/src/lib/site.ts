@@ -20,19 +20,16 @@ export const APK_URL =
   "https://epulmnfbxjmaimefhofp.supabase.co/storage/v1/object/public/downloads/novahost.apk";
 
 /**
- * The iOS app is an installable web app, not an App Store listing. This is the
- * single install origin — a handset that installs from anywhere else gets a
- * second device ID and burns its licence binding. Same `||` reasoning as above.
+ * The iOS app is an installable web app, not an App Store listing, so this is
+ * a URL people open rather than a store page.
+ *
+ * It is also the app's ONE install origin, and that is load-bearing rather
+ * than tidy: the handset's device id is a random UUID kept in origin-scoped
+ * storage, so a second origin means a second identity, a `device_mismatch`,
+ * and a user locked out of something they paid for. Whatever this points at
+ * must be the only place the app is served.
  */
-export const IOS_APP_URL = import.meta.env.VITE_IOS_APP_URL || "https://app.novahost-ea.app";
-
-/**
- * The mentor portal now lives on its own domain. This site markets the app, so
- * there is no mentor signup, no mentor login and no mentor pricing on it — but
- * a mentor who lands here still needs a way through. Set VITE_PORTAL_URL and a
- * single discreet footer link appears; leave it unset and nothing renders.
- */
-export const PORTAL_URL = import.meta.env.VITE_PORTAL_URL ?? "";
+export const IOS_APP_URL = import.meta.env.VITE_IOS_APP_URL || "https://novahost-app.vercel.app";
 
 /** Marketing prices in Rand. PayFast collects R1 more on the first two to
  *  absorb the card fee — see generate-payfast-checkout. Do not "fix" these to

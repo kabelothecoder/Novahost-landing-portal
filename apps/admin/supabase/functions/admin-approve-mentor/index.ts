@@ -18,10 +18,11 @@ const CORS_HEADERS = {
  * from a non-admin JWT -- the service role passes because `auth.uid()` is null
  * for it.
  *
- * AUTH: a signed-in user who appears in public.admin_users. `verify_jwt` is on,
- * but that alone is NOT enough here -- the project's anon key is itself a valid
- * signed JWT and ships inside the APK -- so the body calls `auth.getUser()` and
- * then checks `admin_users`. Same pattern as admin-grant-access.
+ * AUTH: a signed-in user who appears in public.admin_users, on a session that
+ * has cleared two-factor. `verify_jwt` is on, but that alone is NOT enough
+ * here -- the project's anon key is itself a valid signed JWT and ships inside
+ * the APK -- so the body calls `auth.getUser()`, checks `admin_users`, and then
+ * requires aal2. Same pattern as admin-grant-access.
  */
 
 type Body = {
@@ -47,6 +48,32 @@ type MentorRow = {
   tiktok: string | null
   telegram: string | null
   whatsapp: string | null
+}
+
+/**
+ * The assurance level of a token that has ALREADY been verified.
+ *
+ * `auth.getUser(jwt)` checks the signature against the auth server, so by the
+ * time this is called the token is authentic and reading its payload is safe.
+ * Never call it on a token that has not been through getUser first.
+ *
+ * 'aal1' means the caller knew a password. 'aal2' means they also proved
+ * possession of an enrolled authenticator. Approving a mentor hands somebody
+ * the ability to send trades to other people's broker accounts, so a stolen
+ * password on its own must not be able to do it.
+ */
+function assuranceLevel (jwt: string): string | null {
+  try {
+    const payload = jwt.split('.')[1]
+    if (!payload) return null
+    const b64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4)
+    const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))
+    const claims = JSON.parse(new TextDecoder().decode(bytes))
+    return typeof claims.aal === 'string' ? claims.aal : null
+  } catch {
+    return null
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -89,6 +116,16 @@ Deno.serve(async (req: Request) => {
     if (!admin) {
       console.warn('[admin-approve-mentor] rejected non-admin ' + user.id)
       return json({ success: false, error: 'Not authorised.' }, 403)
+    }
+
+    // Knowing the password is not enough to open this.
+    if (assuranceLevel(jwt) !== 'aal2') {
+      console.warn('[admin-approve-mentor] refused an aal1 session for ' + user.id)
+      return json({
+        success: false,
+        error: 'Two-factor authentication is required for the admin console.',
+        code: 'mfa_required',
+      }, 403)
     }
 
     const body = (await req.json().catch(() => ({}))) as Body

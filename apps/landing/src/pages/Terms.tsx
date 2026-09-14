@@ -9,7 +9,7 @@ export default function Terms() {
           These terms are the agreement between you and {COMPANY.legalName}
           {COMPANY.registration ? ` (registration ${COMPANY.registration})` : ""} (&ldquo;
           {COMPANY.name}&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;), trading from{" "}
-          {COMPANY.address}, for use of the {COMPANY.name} mobile app and mentor portal. By
+          {COMPANY.address}, for use of the {COMPANY.name} mobile app and provider portal. By
           downloading the app, creating an account, or entering a licence key, you accept these
           terms. If you do not accept them, do not use the service.
         </p>
@@ -17,7 +17,7 @@ export default function Terms() {
     >
       <h2>1. What NovaHost is</h2>
       <p>
-        NovaHost is software. It hosts a trading mentor&rsquo;s automated strategy (an &ldquo;Expert
+        NovaHost is software. It hosts a robot provider&rsquo;s automated strategy (an &ldquo;Expert
         Advisor&rdquo; or &ldquo;robot&rdquo;) and copies the trades that robot generates onto the
         MetaTrader&nbsp;4 or MetaTrader&nbsp;5 account you link, sized to your balance and the limits
         you set. It also includes an AI chart-scanning tool and per-symbol risk controls.
@@ -55,9 +55,9 @@ export default function Terms() {
           device binding, entitlement checks, or usage limits.
         </li>
         <li>
-          A mentor issues the key that ties your app to their robot. If your arrangement with that
-          mentor ends, your key may stop receiving that robot&rsquo;s trades. That is between you and
-          the mentor; it is not a fault in the app and is not refundable by us.
+          A robot provider issues the key that ties your app to their robot. If your arrangement with that
+          provider ends, your key may stop receiving that robot&rsquo;s trades. That is between you and
+          the provider; it is not a fault in the app and is not refundable by us.
         </li>
       </ul>
 
@@ -89,16 +89,16 @@ export default function Terms() {
         <li>upload malware, or content you have no right to upload, through the chart scanner or portal.</li>
       </ul>
 
-      <h2>6. NovaHost and your mentor</h2>
+      <h2>6. NovaHost and your robot provider</h2>
       <p>
-        A robot on NovaHost is published by a mentor or signal provider who is independent of us.
-        NovaHost is <strong>not a party to</strong> any arrangement between you and a mentor, and a
-        mentor is not our agent, employee, or partner. We are not responsible for a mentor&rsquo;s
+        A robot on NovaHost is published by a robot provider who is independent of us.
+        NovaHost is <strong>not a party to</strong> any arrangement between you and a robot provider, and a
+        robot provider is not our agent, employee, or partner. We are not responsible for a robot provider&rsquo;s
         strategy, signals, decisions, conduct, fees, claims, or availability, for the results of
-        following their robot, or for any dispute between you and them. Choosing a mentor, trusting
+        following their robot, or for any dispute between you and them. Choosing a robot provider, trusting
         their robot, and agreeing terms with them is entirely your decision and your risk. If a
-        mentor stops sending signals, changes their strategy, or ends your arrangement, that is
-        between you and the mentor and is not a fault in the service.
+        provider stops sending signals, changes their strategy, or ends your arrangement, that is
+        between you and the robot provider and is not a fault in the service.
       </p>
       <p>
         <strong>If you host a robot</strong>, you are solely responsible for the strategy you
@@ -124,7 +124,7 @@ export default function Terms() {
           or all of the money in your trading account, and losses can happen quickly.
         </strong>{" "}
         Automated and copied trading does not reduce that risk and can increase it. Past performance
-        of any robot, mentor, or strategy is not a reliable indicator of future results. You are
+        of any robot, robot provider, or strategy is not a reliable indicator of future results. You are
         responsible for every position opened on your account, for the risk settings you choose, and
         for monitoring your account. Only trade with money you can afford to lose.
       </p>

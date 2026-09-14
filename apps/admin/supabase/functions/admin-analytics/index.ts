@@ -13,11 +13,11 @@ const CORS_HEADERS = {
  * things: the service role (most of these tables are owner-scoped by RLS and an
  * admin is not the owner of anybody's row) and the same admin check.
  *
- * AUTH: a signed-in user who appears in `public.admin_users`. `verify_jwt` is on
- * but that alone is NOT enough -- the project's anon key is itself a valid
- * signed JWT and ships inside the mobile app -- so the body calls
- * `auth.getUser()` and then checks `admin_users`. Same pattern as
- * admin-grant-access and support-reset-device.
+ * AUTH: a signed-in user who appears in `public.admin_users`, on a session that
+ * has cleared two-factor. `verify_jwt` is on but that alone is NOT enough --
+ * the project's anon key is itself a valid signed JWT and ships inside the
+ * mobile app -- so the body calls `auth.getUser()`, checks `admin_users`, and
+ * then requires aal2.
  *
  * Everything here is a read except `adjustment.create` / `adjustment.delete`,
  * which write the refunds ledger.
@@ -154,6 +154,32 @@ function toPayments(rows: Array<{ id: string; payload: Record<string, unknown>; 
 /** A payment only counts toward revenue when it is live and completed. */
 const counts = (p: Payment) => p.live && p.status === "COMPLETE";
 
+/**
+ * The assurance level of a token that has ALREADY been verified.
+ *
+ * `auth.getUser(jwt)` checks the signature against the auth server, so by the
+ * time this is called the token is authentic and reading its payload is safe.
+ * Never call it on a token that has not been through getUser first.
+ *
+ * "aal1" means the caller knew a password. "aal2" means they also proved
+ * possession of an enrolled authenticator. This function returns every rand
+ * the business has taken and every customer's entitlement, so a stolen
+ * password on its own must not open it.
+ */
+function assuranceLevel(jwt: string): string | null {
+  try {
+    const payload = jwt.split(".")[1];
+    if (!payload) return null;
+    const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+    const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+    const claims = JSON.parse(new TextDecoder().decode(bytes));
+    return typeof claims.aal === "string" ? claims.aal : null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
@@ -197,6 +223,19 @@ Deno.serve(async (req: Request) => {
     if (!admin) {
       console.warn("[admin-analytics] rejected non-admin " + user.id);
       return json({ success: false, error: "Not authorised." }, 403);
+    }
+
+    // Knowing the password is not enough to open this.
+    if (assuranceLevel(jwt) !== "aal2") {
+      console.warn("[admin-analytics] refused an aal1 session for " + user.id);
+      return json(
+        {
+          success: false,
+          error: "Two-factor authentication is required for the admin console.",
+          code: "mfa_required",
+        },
+        403,
+      );
     }
 
     const body = (await req.json().catch(() => ({}))) as Body;
@@ -645,10 +684,10 @@ Deno.serve(async (req: Request) => {
           executionsFailed: failures.length,
           licences: licences.length,
           /**
-           * The number that explains an otherwise baffling pipeline: a mentor
-           * can send perfectly good signals to a fleet where nobody has turned
-           * auto-execute on, and every one of them is delivered and none of
-           * them trade.
+           * The number that explains an otherwise baffling pipeline: a robot
+           * can fan perfectly good signals out to a fleet where nobody has
+           * turned auto-execute on, and every one of them is delivered and
+           * none of them trade.
            */
           autoExecuteOptedIn: optedIn,
           autoExecuteShare: licences.length ? optedIn / licences.length : 0,

@@ -35,6 +35,33 @@ type Body = {
   note?: string
 }
 
+
+/**
+ * The assurance level of a token that has ALREADY been verified.
+ *
+ * `auth.getUser(jwt)` checks the signature against the auth server, so by the
+ * time this is called the token is authentic and reading its payload is safe.
+ * Never call it on a token that has not been through getUser first.
+ *
+ * 'aal1' means the caller knew a password. 'aal2' means they also proved
+ * possession of an enrolled authenticator. This console can see every payment
+ * the business has taken and can hand out free access to the product, so a
+ * stolen password on its own must not open it.
+ */
+function assuranceLevel (jwt: string): string | null {
+  try {
+    const payload = jwt.split('.')[1]
+    if (!payload) return null
+    const b64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4)
+    const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))
+    const claims = JSON.parse(new TextDecoder().decode(bytes))
+    return typeof claims.aal === 'string' ? claims.aal : null
+  } catch {
+    return null
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS })
@@ -75,6 +102,16 @@ Deno.serve(async (req: Request) => {
     if (!admin) {
       console.warn('[admin-grant-access] rejected non-admin ' + user.id)
       return json({ success: false, error: 'Not authorised.' }, 403)
+    }
+
+    // Knowing the password is not enough to open this.
+    if (assuranceLevel(jwt) !== 'aal2') {
+      console.warn('[admin-grant-access] refused an aal1 session for ' + user.id)
+      return json({
+        success: false,
+        error: 'Two-factor authentication is required for the admin console.',
+        code: 'mfa_required',
+      }, 403)
     }
 
     const actor = user.email ?? user.id

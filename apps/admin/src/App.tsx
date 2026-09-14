@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AdminAuthProvider, useAdminAuth } from "@/contexts/AdminAuthContext";
 import { AdminShell } from "@/components/AdminShell";
+import { MfaGate } from "@/components/MfaGate";
 import Login from "@/pages/Login";
 import Overview from "@/pages/Overview";
 import Revenue from "@/pages/Revenue";
@@ -31,8 +32,13 @@ function Spinner() {
  * spinner until the answer is a real boolean.
  *
  * The gate itself is cosmetic. Every page's data comes from an edge function
- * that re-checks `admin_users` on the service role, so deleting this component
- * in devtools buys a determined visitor a set of empty tables and a row of 403s.
+ * that re-checks `admin_users` AND requires an aal2 session on the service
+ * role, so deleting this component in devtools buys a determined visitor a set
+ * of empty tables and a row of 403s.
+ *
+ * Order matters: admin check, then two-factor. A mentor who signs in here must
+ * meet the "not an admin" screen rather than be invited to enrol an
+ * authenticator against a console they can never open.
  */
 function Gate() {
   const { user, loading, isAdmin, adminLoading } = useAdminAuth();
@@ -43,20 +49,22 @@ function Gate() {
   if (!isAdmin) return <Login />;
 
   return (
-    <Routes>
-      <Route element={<AdminShell />}>
-        <Route path="/" element={<Overview />} />
-        <Route path="/revenue" element={<Revenue />} />
-        <Route path="/payments" element={<Payments />} />
-        <Route path="/subscriptions" element={<Subscriptions />} />
-        <Route path="/approvals" element={<Approvals />} />
-        <Route path="/comp-access" element={<CompAccess />} />
-        <Route path="/directory" element={<Directory />} />
-        <Route path="/licences" element={<Licences />} />
-        <Route path="/signals" element={<Signals />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+    <MfaGate>
+      <Routes>
+        <Route element={<AdminShell />}>
+          <Route path="/" element={<Overview />} />
+          <Route path="/revenue" element={<Revenue />} />
+          <Route path="/payments" element={<Payments />} />
+          <Route path="/subscriptions" element={<Subscriptions />} />
+          <Route path="/approvals" element={<Approvals />} />
+          <Route path="/comp-access" element={<CompAccess />} />
+          <Route path="/directory" element={<Directory />} />
+          <Route path="/licences" element={<Licences />} />
+          <Route path="/signals" element={<Signals />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </MfaGate>
   );
 }
 

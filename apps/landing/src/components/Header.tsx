@@ -4,9 +4,9 @@ import { VISOR, Wordmark } from "./Brand";
 
 /** The numbered nav from the reference — the numbers encode the reading order. */
 export const NAV = [
-  ["01", "How it works", "#how-it-works"],
-  ["02", "Features", "#features"],
-  ["03", "Chart scanner", "#scanner"],
+  ["01", "What it is", "#what-it-is"],
+  ["02", "How it works", "#how-it-works"],
+  ["03", "The app", "#the-app"],
   ["04", "Pricing", "#pricing"],
   ["05", "Questions", "#faq"],
 ] as const;
@@ -14,9 +14,9 @@ export const NAV = [
 /**
  * The site header.
  *
- * There is no Sign in and no Register here, and that is the point: this domain
- * markets the app to the people who use it. Mentors sign in on the portal's own
- * domain.
+ * There is no Sign in and no Register here, and that is the point: nobody signs
+ * in on this site at all. It markets the app to the people who run a bot on it;
+ * the portal and the admin console are on their own unlisted hostnames.
  */
 export function Header() {
   const [open, setOpen] = useState(false);

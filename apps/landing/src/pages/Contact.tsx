@@ -49,14 +49,16 @@ export default function Contact() {
       </ul>
 
       {/*
-        This site markets the app; the mentor portal is a separate product on a
-        separate domain with its own signup. Rather than send people to a URL
-        that may change, route the enquiry through the inbox we already monitor.
+        This site markets the app to the people who run a robot on it. The
+        provider portal is a separate product on its own unlisted hostname, so
+        the enquiry goes through the inbox we already monitor rather than to a
+        link we would then have to publish.
       */}
-      <h2>Hosting a robot</h2>
+      <h2>Listing a robot on NovaHost</h2>
       <p>
-        Mentors who want to host a robot and issue keys to students should email us with
-        &ldquo;Hosting&rdquo; in the subject line and we will send you the portal details.
+        If you build or sell an Expert Advisor and want it hosted on NovaHost so your buyers can
+        run it from their phones, email us with &ldquo;Hosting&rdquo; in the subject line and we
+        will take it from there.
       </p>
 
       <h2>Business details</h2>
