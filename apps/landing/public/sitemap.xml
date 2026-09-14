@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The five public routes, and all of them.
+
+  robots.txt has pointed at this file since the site was built, but the file did
+  not exist — and because vercel.json rewrites every unmatched path to
+  index.html, requesting it returned the homepage with a 200 rather than a 404.
+  A crawler asking for XML and being handed HTML is the worst of both: it looks
+  like a success and parses as nothing.
+
+  Static files in public/ are matched before rewrites, so this file existing is
+  what fixes it.
+
+  Keep in step with the routes in src/App.tsx. There is no build step generating
+  this, so a new route that is not added here is a route Google is not told
+  about.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://novahost-ea.app/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://novahost-ea.app/terms</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://novahost-ea.app/privacy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://novahost-ea.app/refunds</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://novahost-ea.app/contact</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>
