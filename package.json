@@ -16,6 +16,11 @@
     "build:landing": "npm run build --workspace apps/landing",
     "build:portal": "npm run build --workspace apps/portal",
     "build:admin": "npm run build --workspace apps/admin",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "overrides": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0"
   }
 }

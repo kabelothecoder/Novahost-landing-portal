@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import type { LucideIcon } from "lucide-react";
 import {
   BadgeCheck,
   Banknote,
@@ -21,11 +22,25 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  /** Only the dashboard matches exactly; every other row stays lit on its
+   *  detail pages. */
+  end?: boolean;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
 /**
  * Grouped so the sidebar reads as three jobs rather than nine links: watch the
  * money, look after the people, keep the machine running.
  */
-const NAV = [
+const NAV: NavGroup[] = [
   {
     label: "Business",
     items: [
@@ -50,7 +65,7 @@ const NAV = [
       { to: "/signals", label: "Signal pipeline", icon: Radio },
     ],
   },
-] as const;
+];
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -80,7 +95,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
               <li key={item.to}>
                 <NavLink
                   to={item.to}
-                  end={"end" in item ? item.end : false}
+                  end={item.end ?? false}
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     cn(
