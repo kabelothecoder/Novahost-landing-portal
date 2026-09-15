@@ -26,8 +26,10 @@ export default function Privacy() {
           associated with it.
         </li>
         <li>
-          <strong>Broker connection details</strong>: your MetaTrader server name, account login, and
-          password, which you enter to link your trading account.
+          <strong>Broker connection details</strong>: the sign-in details for the MetaTrader account
+          you already hold with your own broker &mdash; server name, account number and password
+          &mdash; which the app sends over an encrypted connection to our trade-copier provider so
+          that it can place trades on that account.
         </li>
         <li>
           <strong>Chart images</strong> you upload to the AI chart scanner.
@@ -83,7 +85,12 @@ export default function Privacy() {
 
       <h2>3. Broker credentials</h2>
       <p>
-        Your broker login and password are transmitted over an encrypted connection to our
+        These are the details of an account you already hold with your own broker. {COMPANY.name} is
+        not a broker, and we never ask for them by email or message, or anywhere other than inside
+        the {COMPANY.name} app itself.
+      </p>
+      <p>
+        You enter them once in the app, over an encrypted connection, and they are passed to our
         trade-copier provider for the sole purpose of creating and maintaining the connection that
         copies trades to your account. We do not use them for anything else and do not share them with
         anyone other than that provider. You can break the connection at any time by removing the link
