@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   LayoutTemplate,
   MessageSquare,
+  Percent,
   RotateCcw,
   SlidersHorizontal,
   Zap,
@@ -54,10 +55,19 @@ const navGroups: Array<{
     ],
   },
   {
+    // The affiliate programme reads as its own job: what the mentor earns, and
+    // the page they earn at the threshold. Web Builder moved out of Resources
+    // because it is no longer a tool you might use -- it is a reward you unlock.
+    label: "Earnings",
+    items: [
+      { title: "Commission", url: "/affiliate", icon: Percent },
+      { title: "Web Builder", url: "/builder", icon: LayoutTemplate },
+    ],
+  },
+  {
     label: "Resources",
     items: [
       { title: "Hosting Guide", url: "/tutorial", icon: BookOpen },
-      { title: "Web Builder", url: "/builder", icon: LayoutTemplate },
       { title: "Feedback", url: "/feedback", icon: MessageSquare },
     ],
   },

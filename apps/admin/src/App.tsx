@@ -15,6 +15,9 @@ import CompAccess from "@/pages/CompAccess";
 import Directory from "@/pages/Directory";
 import Licences from "@/pages/Licences";
 import Signals from "@/pages/Signals";
+import Affiliate from "@/pages/Affiliate";
+import Agreements from "@/pages/Agreements";
+import Websites from "@/pages/Websites";
 
 function Spinner() {
   return (
@@ -57,6 +60,9 @@ function Gate() {
           <Route path="/payments" element={<Payments />} />
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/approvals" element={<Approvals />} />
+          <Route path="/affiliate" element={<Affiliate />} />
+          <Route path="/agreements" element={<Agreements />} />
+          <Route path="/websites" element={<Websites />} />
           <Route path="/comp-access" element={<CompAccess />} />
           <Route path="/directory" element={<Directory />} />
           <Route path="/licences" element={<Licences />} />
