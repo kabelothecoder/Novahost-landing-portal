@@ -1,0 +1,29 @@
+# Line endings are normalised to LF in the repository and checked out as LF.
+#
+# This repo had no .gitattributes and the machines building it have
+# core.autocrlf=true, which meant every checkout rewrote every source file's
+# endings. Pinning eol=lf makes the working copy match what is stored, so a
+# diff shows what somebody actually changed.
+* text=auto eol=lf
+
+# Binary assets, declared so git never applies the rule above to them.
+#
+# Git's own text/binary heuristic only sniffs the first 8000 bytes for a NUL,
+# and a PDF whose header and metadata are plain ASCII slips through it. When it
+# does, autocrlf turns every 0x0A inside the compressed streams into 0x0D 0x0A
+# and the file is corrupt on checkout. Add anything else that is not text here.
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.gif   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.mp4   binary
+*.webm  binary
+*.ex4   binary
+*.ex5   binary

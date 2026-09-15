@@ -70,6 +70,35 @@ step, and do not "fix" one to match another.
 `new Notification()` is illegal in an iOS standalone web app. Never write copy
 that promises an alert.
 
+**Commission is counted in SQL, never in an app.** The affiliate programme's
+definition of a sale lives in `affiliate_license_sales` and the two scoreboard
+views on top of it. The portal and the admin console both read those through
+their own edge function, so a mentor and an admin cannot be shown two different
+numbers for the same month. Do not reimplement the arithmetic in TypeScript.
+
+The attribution chain is the licence key the buyer typed at checkout:
+`itn_logs.payload->>'custom_str4'` → `licenses.license_key` → `licenses.user_id`.
+Payments taken before the key-first checkout carry an empty `custom_str4` and
+cannot be attributed to anybody; they surface in
+`affiliate_unattributed_payments` and are shown on the admin screen rather than
+guessed at. `licenses.owner_email` is not a fallback — five licences of eighty-six
+have one and none of them match a payer.
+
+**Generating a licence key is not a sale.** A key qualifies only once the money
+has cleared at PayFast, which for most mentors is a small fraction of what they
+have issued. Any screen that reports "keys" must say which kind it means.
+
+**The mentor agreement holds bank details.** `mentor_agreements` is never read
+from a browser; the signed PDF lives in the private `mentor-documents` bucket
+under the mentor's own uid prefix. The account number is returned masked
+everywhere except the admin agreements screen, which is where somebody has to
+type it into a banking app. Do not widen that.
+
+**Programme terms are data, not constants.** Rates, targets and the website
+threshold live in `affiliate_settings` and are editable from the admin console.
+An approved agreement carries the rate it was approved at, so renegotiating the
+programme never rewrites terms somebody already signed.
+
 **One install origin for iOS.** `https://app.novahost-ea.app`. A handset that
 installs from any other origin gets a second device id and burns its licence
 binding.
