@@ -234,6 +234,13 @@ export default function Commission() {
               />
             )}
 
+            {/*
+             * The same fact reads two completely different ways depending on
+             * `require_scanner`, and getting it wrong would be a lie about
+             * somebody's money. When the scanner is required these keys are
+             * stuck short of qualifying; when it is not, they already count and
+             * the scanner is just upsell the mentor has left on the table.
+             */}
             {!loading && (s?.awaitingScanner ?? 0) > 0 && (
               <p className="mt-5 flex items-start gap-2 rounded-md border border-border bg-muted/50 px-3 py-2.5 text-[12.5px] text-muted-foreground">
                 <ScanLine className="mt-px h-3.5 w-3.5 shrink-0" />
@@ -242,7 +249,9 @@ export default function Commission() {
                     {count(s!.awaitingScanner)}{" "}
                     {s!.awaitingScanner === 1 ? "student has" : "students have"}
                   </strong>{" "}
-                  paid for app access but not the chart scanner. A key counts once both are paid.
+                  {p?.requireScanner
+                    ? "paid for app access but not the chart scanner. A key counts once both are paid."
+                    : "not added the chart scanner. Those keys already count — the scanner is extra you could still sell them."}
                 </span>
               </p>
             )}
