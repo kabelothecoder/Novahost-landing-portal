@@ -66,10 +66,14 @@ Deno.serve(async (req) => {
 
     // --- Credits system bypassed for subscription model ---
 
-    // Find product by name or code
+    // Find product by name or code, scoped to this mentor. `code` is only
+    // unique per (user_id, code) -- two mentors can and do name a robot the
+    // same thing -- so an unscoped lookup can match more than one row and
+    // make maybeSingle() error on a robot that genuinely belongs to the caller.
     let { data: product, error: prodErr } = await novaHost
       .from('expert_advisors')
       .select('id, code, name, display_name, avatar_url, background_video_url, symbols')
+      .eq('user_id', user.id)
       .ilike('name', ea)
       .maybeSingle();
 
@@ -77,10 +81,13 @@ Deno.serve(async (req) => {
       const byCode = await novaHost
         .from('expert_advisors')
         .select('id, code, name, display_name, avatar_url, background_video_url, symbols')
+        .eq('user_id', user.id)
         .eq('code', ea)
         .maybeSingle();
       product = byCode.data ?? null;
-      prodErr = byCode.error ?? prodErr;
+      // Replace, not merge: a successful fallback must clear the first
+      // attempt's error, or a real product here still reads as "not found".
+      prodErr = byCode.error;
     }
 
     if (!product || prodErr) {
