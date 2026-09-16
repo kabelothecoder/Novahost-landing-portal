@@ -148,7 +148,14 @@ export default function GenerateKey() {
     });
 
     if (error || !rpcResponse || rpcResponse.error) {
-      const msg = rpcResponse?.error || error?.message || "Failed to generate key. Check credits.";
+      // invoke() puts a non-2xx body inside `error`, not `data`, so the
+      // function's own reason ("EA (product) not found") would otherwise be
+      // replaced by the SDK's generic "Edge Function returned a non-2xx
+      // status code" -- dig it back out of the response the SDK stashed.
+      const detail = error
+        ? await (error as { context?: Response }).context?.clone()?.json().catch(() => null)
+        : null;
+      const msg = rpcResponse?.error || detail?.error || error?.message || "Failed to generate key. Check credits.";
       toast({ title: "Error", description: msg, variant: "destructive" });
       return;
     }
