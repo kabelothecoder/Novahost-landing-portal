@@ -18,6 +18,8 @@ import QuickTrade from "@/pages/QuickTrade";
 import NormalTrade from "@/pages/NormalTrade";
 import HostingTutorial from "@/pages/HostingTutorial";
 import WebBuilder from "@/pages/WebBuilder";
+import Commission from "@/pages/Commission";
+import Agreement from "@/pages/Agreement";
 import Feedback from "@/pages/Feedback";
 import ManageEA from "@/pages/ManageEA";
 import Login from "@/pages/Login";
@@ -134,6 +136,8 @@ function AppRoutes() {
         <Route path="stats" element={<KeyStats />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="affiliate" element={<Commission />} />
+        <Route path="affiliate/agreement" element={<Agreement />} />
         <Route path="builder" element={<WebBuilder />} />
         <Route path="feedback" element={<Feedback />} />
         <Route path="dashboard/ea/:id/manage" element={<ManageEA />} />

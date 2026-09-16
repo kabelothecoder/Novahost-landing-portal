@@ -5,12 +5,15 @@ import {
   BadgeCheck,
   Banknote,
   CreditCard,
+  FileSignature,
   Gift,
+  Globe,
   KeyRound,
   LayoutDashboard,
   LogOut,
   Menu,
   Moon,
+  Percent,
   Radio,
   Sun,
   UserCheck,
@@ -37,8 +40,8 @@ interface NavGroup {
 }
 
 /**
- * Grouped so the sidebar reads as three jobs rather than nine links: watch the
- * money, look after the people, keep the machine running.
+ * Grouped so the sidebar reads as four jobs rather than twelve links: watch the
+ * money, grow the network, look after the people, keep the machine running.
  */
 const NAV: NavGroup[] = [
   {
@@ -47,6 +50,14 @@ const NAV: NavGroup[] = [
       { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
       { to: "/revenue", label: "Revenue", icon: Banknote },
       { to: "/payments", label: "Payments & refunds", icon: CreditCard },
+    ],
+  },
+  {
+    label: "Affiliate",
+    items: [
+      { to: "/affiliate", label: "Performance", icon: Percent },
+      { to: "/agreements", label: "Agreements & payouts", icon: FileSignature },
+      { to: "/websites", label: "Website requests", icon: Globe },
     ],
   },
   {

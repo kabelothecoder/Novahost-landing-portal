@@ -183,6 +183,123 @@ export interface AppUserRow {
   spend: number;
 }
 
+// ── Affiliate programme ─────────────────────────────────────────────────────
+
+export interface AffiliateSettings {
+  optionATarget: number;
+  optionARate: number;
+  optionBTarget: number;
+  optionBRate: number;
+  websiteThreshold: number;
+  requireScanner: boolean;
+  agreementVersion: string;
+}
+
+export interface AffiliateMentorRow {
+  mentorId: string;
+  name: string;
+  email: string | null;
+  keysIssued: number;
+  qualifyingKeys: number;
+  awaitingScanner: number;
+  qualifyingKeysThisMonth: number;
+  qualifyingRevenue: number;
+  qualifyingRevenueThisMonth: number;
+  robots: number;
+  lastSaleAt: string | null;
+  conversionPct: number;
+  agreementStatus: "none" | "draft" | "submitted" | "approved" | "rejected";
+  commissionOption: "A" | "B";
+  commissionRate: number;
+  target: number;
+  targetMet: boolean;
+  /** Only ever non-zero for an approved agreement that has met its target. */
+  commissionDue: number;
+  paidOut: number;
+  websiteStatus: string;
+  websiteEligible: boolean;
+}
+
+export interface AffiliateBotRow {
+  eaId: string;
+  name: string;
+  code: string;
+  mentorId: string;
+  mentorName: string | null;
+  keysIssued: number;
+  qualifyingKeys: number;
+  qualifyingRevenue: number;
+  conversionPct: number;
+  lastSaleAt: string | null;
+}
+
+export interface AgreementRow {
+  mentorId: string;
+  mentorName: string;
+  mentorEmail: string | null;
+  status: "draft" | "submitted" | "approved" | "rejected";
+  commissionOption: "A" | "B" | null;
+  payoutFrequency: "weekly" | "monthly" | null;
+  fullName: string | null;
+  phone: string | null;
+  email: string | null;
+  bankName: string | null;
+  accountHolder: string | null;
+  accountNumber: string | null;
+  accountType: string | null;
+  branchName: string | null;
+  branchCode: string | null;
+  documentName: string | null;
+  hasDocument: boolean;
+  signedOn: string | null;
+  agreementVersion: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  commissionRate: number | null;
+  qualifyingTarget: number | null;
+  qualifyingKeys: number;
+  keysIssued: number;
+}
+
+export interface WebsiteRow {
+  id: string;
+  mentorId: string;
+  mentorName: string;
+  mentorEmail: string | null;
+  status: "requested" | "in_review" | "approved" | "building" | "live" | "rejected";
+  robotName: string | null;
+  subdomain: string | null;
+  headline: string | null;
+  tagline: string | null;
+  about: string | null;
+  brokerLinks: Array<Record<string, string>>;
+  groupLinks: Array<Record<string, string>>;
+  results: Array<Record<string, string>>;
+  testimonials: Array<Record<string, string>>;
+  priceZar: number | null;
+  payoutMethod: string | null;
+  payoutDetail: string | null;
+  requestedAt: string | null;
+  reviewNote: string | null;
+  liveUrl: string | null;
+  qualifyingKeys: number;
+  threshold: number;
+}
+
+export interface MentorPayoutRow {
+  id: string;
+  periodStart: string;
+  periodEnd: string;
+  qualifyingKeys: number;
+  grossRevenue: number;
+  commissionRate: number;
+  amount: number;
+  status: "pending" | "paid" | "cancelled";
+  paidAt: string | null;
+  reference: string | null;
+}
+
 /**
  * Invoke an edge function and unwrap the `{ success, ... }` envelope every one
  * of ours returns.
@@ -305,4 +422,99 @@ export const api = {
 
   approvalsDecide: (userId: string, action: "approve" | "reject", note?: string) =>
     call<Record<string, never>>("admin-approve-mentor", { action, userId, note }),
+
+  // ── Affiliate programme
+  //
+  // Note these do NOT recompute commission in the browser. Every figure comes
+  // from the same SQL views the mentor portal reads, so a mentor and an admin
+  // looking at the same month are never shown two different numbers.
+  affiliateOverview: () =>
+    call<{
+      settings: AffiliateSettings;
+      totals: {
+        mentors: number;
+        qualifyingKeys: number;
+        qualifyingRevenue: number;
+        commissionDue: number;
+        paidOut: number;
+        agreementsPending: number;
+        websitesPending: number;
+        unattributedRevenue: number;
+        unattributedPayments: number;
+      };
+      mentors: AffiliateMentorRow[];
+      robots: AffiliateBotRow[];
+    }>("admin-affiliate", { action: "overview" }),
+
+  agreementsList: () =>
+    call<{
+      agreements: AgreementRow[];
+      defaults: {
+        optionARate: number;
+        optionATarget: number;
+        optionBRate: number;
+        optionBTarget: number;
+      };
+    }>("admin-affiliate", { action: "agreements" }),
+
+  agreementDecide: (input: {
+    mentorId: string;
+    decision: "approve" | "reject";
+    note?: string;
+    commissionRate?: number;
+    qualifyingTarget?: number;
+  }) => call<Record<string, never>>("admin-affiliate", { action: "agreement.decide", ...input }),
+
+  /** A 5-minute signed URL for the signed PDF. The bucket is private. */
+  agreementDocumentUrl: (mentorId: string) =>
+    call<{ url: string | null }>("admin-affiliate", {
+      action: "agreement.document-url",
+      mentorId,
+    }),
+
+  affiliateMentor: (mentorId: string) =>
+    call<{
+      mentor: { id: string; name: string; email: string | null };
+      sales: Array<{
+        licenseKey: string;
+        issuedAt: string;
+        paidAt: string | null;
+        buyerEmail: string | null;
+        gross: number;
+      }>;
+      payouts: MentorPayoutRow[];
+    }>("admin-affiliate", { action: "mentor", mentorId }),
+
+  payoutCreate: (input: {
+    mentorId: string;
+    periodStart: string;
+    periodEnd: string;
+    amount?: number;
+    reference?: string;
+    note?: string;
+  }) =>
+    call<{ qualifyingKeys: number; grossRevenue: number; amount: number }>("admin-affiliate", {
+      action: "payout.create",
+      ...input,
+    }),
+
+  payoutUpdate: (payoutId: string, status: "pending" | "paid" | "cancelled", reference?: string) =>
+    call<Record<string, never>>("admin-affiliate", {
+      action: "payout.update",
+      payoutId,
+      status,
+      reference,
+    }),
+
+  websitesList: () => call<{ websites: WebsiteRow[] }>("admin-affiliate", { action: "websites" }),
+
+  websiteDecide: (input: {
+    websiteId: string;
+    decision: "in_review" | "approved" | "building" | "live" | "rejected";
+    note?: string;
+    liveUrl?: string;
+  }) => call<Record<string, never>>("admin-affiliate", { action: "website.decide", ...input }),
+
+  affiliateSettingsUpdate: (settings: Partial<AffiliateSettings>) =>
+    call<Record<string, never>>("admin-affiliate", { action: "settings.update", settings }),
 };
