@@ -11,6 +11,8 @@ import Revenue from "@/pages/Revenue";
 import Payments from "@/pages/Payments";
 import Subscriptions from "@/pages/Subscriptions";
 import Approvals from "@/pages/Approvals";
+import KeyRequests from "@/pages/KeyRequests";
+import Broadcast from "@/pages/Broadcast";
 import CompAccess from "@/pages/CompAccess";
 import Directory from "@/pages/Directory";
 import Licences from "@/pages/Licences";
@@ -60,6 +62,8 @@ function Gate() {
           <Route path="/payments" element={<Payments />} />
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/approvals" element={<Approvals />} />
+          <Route path="/key-requests" element={<KeyRequests />} />
+          <Route path="/broadcast" element={<Broadcast />} />
           <Route path="/affiliate" element={<Affiliate />} />
           <Route path="/agreements" element={<Agreements />} />
           <Route path="/websites" element={<Websites />} />

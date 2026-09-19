@@ -11,8 +11,10 @@ import {
   KeyRound,
   LayoutDashboard,
   LogOut,
+  Mail,
   Menu,
   Moon,
+  PackagePlus,
   Percent,
   Radio,
   Sun,
@@ -65,8 +67,10 @@ const NAV: NavGroup[] = [
     items: [
       { to: "/subscriptions", label: "Subscriptions", icon: BadgeCheck },
       { to: "/approvals", label: "Mentor approvals", icon: UserCheck },
+      { to: "/key-requests", label: "Key requests", icon: PackagePlus },
       { to: "/comp-access", label: "Comp access", icon: Gift },
       { to: "/directory", label: "Directory", icon: Users },
+      { to: "/broadcast", label: "Broadcast", icon: Mail },
     ],
   },
   {

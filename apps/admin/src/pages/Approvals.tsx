@@ -3,6 +3,7 @@ import {
   Check,
   ExternalLink,
   Loader2,
+  Mail,
   MailCheck,
   MailWarning,
   RefreshCw,
@@ -16,6 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Empty, LoadError, Panel, Stat, TableSkeleton } from "@/components/primitives";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -66,21 +69,63 @@ export default function Approvals() {
   const { toast } = useToast();
   const [deciding, setDeciding] = useState<string | null>(null);
   const [confirmReject, setConfirmReject] = useState<string | null>(null);
+  // Starting key quota per pending row, editable before approving. Kept in a
+  // map rather than one shared value since more than one signup can be
+  // waiting at once and each may deserve a different starting allowance.
+  const [quotaDrafts, setQuotaDrafts] = useState<Record<string, number>>({});
+  const quotaFor = (id: string) => quotaDrafts[id] ?? 50;
+  const [notifyConfirmOpen, setNotifyConfirmOpen] = useState(false);
+  const [isNotifying, setIsNotifying] = useState(false);
 
   const rows = data?.rows ?? [];
   const pending = useMemo(() => rows.filter((r) => r.approvalStatus === "pending"), [rows]);
   const decided = useMemo(() => rows.filter((r) => r.approvalStatus !== "pending"), [rows]);
+  const approvedCount = useMemo(
+    () => rows.filter((r) => r.approvalStatus === "approved").length,
+    [rows],
+  );
 
-  const decide = async (id: string, label: string, action: "approve" | "reject") => {
+  const notifyApproved = async () => {
+    setIsNotifying(true);
+    try {
+      const result = await api.notifyApprovedMentors();
+      toast({
+        title: "Notification sent",
+        description:
+          result.skipped > 0
+            ? `Emailed ${result.notified} of ${result.total} approved mentors. ${result.skipped} could not be reached — check Resend is configured.`
+            : `Emailed all ${result.notified} approved mentors.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Could not send notifications",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
+    } finally {
+      setIsNotifying(false);
+      setNotifyConfirmOpen(false);
+    }
+  };
+
+  const decide = async (
+    id: string,
+    label: string,
+    action: "approve" | "reject",
+    quota?: number,
+  ) => {
     setDeciding(id);
     try {
-      await api.approvalsDecide(id, action);
+      const result = await api.approvalsDecide(id, action, undefined, action === "approve" ? quota : undefined);
+      const mailNote = result.emailed
+        ? ""
+        : " (their email could not be sent — mail is not fully configured yet)";
       toast({
         title: action === "approve" ? "Mentor approved" : "Mentor rejected",
         description:
-          action === "approve"
-            ? `${label} can now use the portal.`
-            : `${label} stays locked out.`,
+          (action === "approve"
+            ? `${label} can now use the portal, with a quota of ${quota} keys.`
+            : `${label} stays locked out.`) + mailNote,
       });
       reload();
     } catch (err) {
@@ -106,10 +151,22 @@ export default function Approvals() {
           Approving a mentor lets them issue licence keys and send trades to other people&rsquo;s
           broker accounts. Vet the links before you do.
         </p>
-        <Button variant="outline" size="sm" onClick={reload} disabled={loading} className="gap-1.5">
-          <RefreshCw className={loading ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            disabled={loading || approvedCount === 0}
+            onClick={() => setNotifyConfirmOpen(true)}
+          >
+            <Mail className="h-3.5 w-3.5" />
+            Notify all approved mentors
+          </Button>
+          <Button variant="outline" size="sm" onClick={reload} disabled={loading} className="gap-1.5">
+            <RefreshCw className={loading ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -184,13 +241,31 @@ export default function Approvals() {
                   </p>
                 </div>
 
-                <div className="flex shrink-0 gap-2">
+                <div className="flex shrink-0 flex-wrap items-end gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor={`quota-${r.id}`} className="text-[11px] text-muted-foreground">
+                      Starting quota
+                    </Label>
+                    <Input
+                      id={`quota-${r.id}`}
+                      type="number"
+                      min={0}
+                      value={quotaFor(r.id)}
+                      onChange={(e) =>
+                        setQuotaDrafts((prev) => ({
+                          ...prev,
+                          [r.id]: Math.max(0, Math.floor(Number(e.target.value)) || 0),
+                        }))
+                      }
+                      className="h-8 w-20 text-sm"
+                    />
+                  </div>
                   <Button
                     size="sm"
                     className="gap-1.5"
                     disabled={deciding === r.id}
                     onClick={() =>
-                      void decide(r.id, r.email ?? r.displayName ?? "They", "approve")
+                      void decide(r.id, r.email ?? r.displayName ?? "They", "approve", quotaFor(r.id))
                     }
                   >
                     {deciding === r.id ? (
@@ -289,6 +364,32 @@ export default function Approvals() {
             >
               {deciding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Reject
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={notifyConfirmOpen} onOpenChange={(o) => !isNotifying && setNotifyConfirmOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Email all {approvedCount} approved mentors?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sends the same "your portal is approved — sign in and generate your license keys"
+              message to every currently approved mentor, including ones approved a while ago. Use
+              this for a one-time catch-up, not routinely.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isNotifying}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isNotifying}
+              onClick={(e) => {
+                e.preventDefault();
+                void notifyApproved();
+              }}
+            >
+              {isNotifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Send now
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

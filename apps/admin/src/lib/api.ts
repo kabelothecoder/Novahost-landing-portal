@@ -103,6 +103,9 @@ export interface LicenceRow {
   isMaster: boolean;
   autoExecute: boolean;
   robot: string | null;
+  mentor: string | null;
+  /** Null means no affiliate_license_sales row for this key yet, not "no". */
+  appPaid: boolean | null;
   createdAt: string | null;
   deviceCount: number;
   lastSeenAt: string | null;
@@ -420,8 +423,66 @@ export const api = {
       }>;
     }>("admin-approve-mentor", { action: "list" }),
 
-  approvalsDecide: (userId: string, action: "approve" | "reject", note?: string) =>
-    call<Record<string, never>>("admin-approve-mentor", { action, userId, note }),
+  approvalsDecide: (userId: string, action: "approve" | "reject", note?: string, quota?: number | null) =>
+    call<{ quota: number | null; emailed: boolean }>("admin-approve-mentor", { action, userId, note, quota }),
+
+  notifyApprovedMentors: () =>
+    call<{ total: number; notified: number; skipped: number }>("admin-approve-mentor", {
+      action: "notify-approved",
+    }),
+
+  // ── Licence key quotas and requests
+  quotaSet: (userId: string, quota: number | null) =>
+    call<{ quota: number | null }>("admin-approve-mentor", { action: "quota.set", userId, quota }),
+
+  keyRequestsList: () =>
+    call<{
+      rows: Array<{
+        id: string;
+        mentorId: string;
+        mentorName: string | null;
+        mentorEmail: string | null;
+        requested: number;
+        reason: string | null;
+        status: "pending" | "approved" | "declined";
+        granted: number | null;
+        decidedAt: string | null;
+        decisionNote: string | null;
+        createdAt: string;
+      }>;
+    }>("admin-approve-mentor", { action: "requests.list" }),
+
+  keyRequestDecide: (requestId: string, decision: "approved" | "declined", granted?: number, note?: string) =>
+    call<{ granted: number | null; quota: number | null }>("admin-approve-mentor", {
+      action: "request.decide",
+      requestId,
+      decision,
+      granted,
+      note,
+    }),
+
+  // ── Broadcast email (maintenance notices, launches, price changes)
+  broadcastAudienceCount: (audience: "app_users" | "mentors" | "everyone") =>
+    call<{ count: number }>("admin-broadcast", { action: "audience.count", audience }),
+
+  broadcastSend: (audience: "app_users" | "mentors" | "everyone", subject: string, body: string) =>
+    call<{ id: string | null; recipientCount: number; sentCount: number; failedCount: number }>(
+      "admin-broadcast",
+      { action: "send", audience, subject, body },
+    ),
+
+  broadcastHistory: () =>
+    call<{
+      rows: Array<{
+        id: string;
+        audience: "app_users" | "mentors" | "everyone";
+        subject: string;
+        recipientCount: number;
+        sentCount: number;
+        failedCount: number;
+        createdAt: string;
+      }>;
+    }>("admin-broadcast", { action: "history" }),
 
   // ── Affiliate programme
   //
