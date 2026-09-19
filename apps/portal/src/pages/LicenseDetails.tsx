@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { novaHost } from "@/integrations/novahost/client";
 import { 
   ArrowLeft, 
@@ -100,6 +101,7 @@ export default function LicenseDetails() {
   const { licenseId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [license, setLicense] = useState<LicenseDetails | null>(null);
   const [notUsed, setNotUsed] = useState(false);
@@ -107,15 +109,22 @@ export default function LicenseDetails() {
   useEffect(() => {
     (async () => {
       setIsLoading(true);
-      if (!licenseId) {
+      if (!licenseId || !user) {
         setLicense(null);
         setIsLoading(false);
         return;
       }
+      /*
+       * `user_id` is matched here as well as by RLS. This route is addressed by
+       * licence key, so without the filter anyone whose session clears a
+       * broader policy -- an account that is also in `admin_users` -- could
+       * open another mentor's key by URL from inside the mentor portal.
+       */
       const { data: lic, error } = await novaHost
         .from('licenses')
         .select('id, license_key, metadata, status, issued_at, expires_at, product_id, plan_id')
         .eq('license_key', licenseId)
+        .eq('user_id', user.id)
         .maybeSingle();
       if (error || !lic) {
         setLicense(null);
@@ -143,7 +152,7 @@ export default function LicenseDetails() {
       });
       setIsLoading(false);
     })();
-  }, [licenseId]);
+  }, [licenseId, user]);
 
   const getStatusConfig = (status: string) => {
     switch (status) {

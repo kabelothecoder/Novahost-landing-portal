@@ -1,30 +1,45 @@
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 import { novaHost } from "@/integrations/novahost/client";
 import { cn } from "@/lib/utils";
 
+/**
+ * What `get_dashboard_stats()` returns as of migration 20260916090000.
+ *
+ * Every figure is counted from the signed-in mentor's own rows. It used to be
+ * counted from the whole table: the RPC is SECURITY DEFINER and named no
+ * caller, so a mentor who had issued two keys read "Active licenses: 82" --
+ * the platform's total -- and so did every other mentor, seeing the same
+ * number as each other.
+ *
+ * The RPC still emits the three old keys (`total_licenses`, `total_users`,
+ * `managed_equity`) so a portal build deployed before that migration keeps
+ * rendering numbers instead of "NaN". They are deliberately not read here;
+ * drop them from the function once this build is live everywhere.
+ */
 interface StatsData {
-  total_licenses: number;
+  /** Licences this mentor has issued that are currently `active`. */
+  active_licenses: number;
+  /** Every licence this mentor has issued, whatever its status. */
+  keys_issued: number;
+  /** Distinct devices on this mentor's licences with a heartbeat inside 5min. */
   live_fleet: number;
-  total_users: number;
-  managed_equity: number;
+  /** Distinct devices ever activated against this mentor's licences. */
+  devices_linked: number;
 }
 
 type Status = "loading" | "ready" | "error";
 
-const currency = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
-
 const count = new Intl.NumberFormat("en-ZA");
 
 export function KPICards() {
+  const { user } = useAuth();
   const [stats, setStats] = useState<StatsData | null>(null);
   const [status, setStatus] = useState<Status>("loading");
 
   useEffect(() => {
+    if (!user) return;
     let cancelled = false;
 
     async function fetchStats() {
@@ -47,19 +62,26 @@ export function KPICards() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, []);
+  }, [user]);
 
   /*
-   * Each tile used to carry a trend badge — "+12.5%", "+4.2%", "+8.1%", "+2.4%"
-   * — hardcoded next to the live figure it appeared to describe. There is no
+   * Each tile used to carry a trend badge -- "+12.5%", "+4.2%", "+8.1%", "+2.4%"
+   * -- hardcoded next to the live figure it appeared to describe. There is no
    * historical series behind `get_dashboard_stats`, so no delta can be computed
    * honestly and none is shown. Restoring them means a time-bucketed query.
+   *
+   * "Managed equity" is gone rather than scoped. It summed the top ten rows of
+   * `broker_accounts`, a table that holds zero rows and no longer receives any
+   * -- balances reach the apps through the `broker-account` function -- so the
+   * tile had rendered $0 for every mentor since it shipped. "Keys issued" takes
+   * its place, and unlike an equity figure the portal cannot see, it is a
+   * number this account actually owns.
    */
   const kpis = [
-    { label: "Active licenses", value: stats && count.format(stats.total_licenses) },
-    { label: "Live EAs", value: stats && count.format(stats.live_fleet) },
-    { label: "Managed equity", value: stats && currency.format(stats.managed_equity) },
-    { label: "Users", value: stats && count.format(stats.total_users) },
+    { label: "Active licences", value: stats && count.format(stats.active_licenses) },
+    { label: "Live now", value: stats && count.format(stats.live_fleet) },
+    { label: "Devices linked", value: stats && count.format(stats.devices_linked) },
+    { label: "Keys issued", value: stats && count.format(stats.keys_issued) },
   ];
 
   return (

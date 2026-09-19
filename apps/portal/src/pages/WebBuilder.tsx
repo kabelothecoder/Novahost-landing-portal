@@ -219,9 +219,20 @@ export default function WebBuilder() {
     setLoading(true);
     setLoadError("");
     try {
+      /*
+       * Scoped to this mentor. The picker below chooses which robot the
+       * affiliate site is built around, and this query carried no `user_id`
+       * filter -- it leaned on RLS, which held a blanket
+       * "Authenticated users can read products" USING (true) until
+       * 20260916090000. Every mentor's robots appeared in the dropdown, so a
+       * mentor could point their site at a bot they do not own.
+       */
       const [res, eas] = await Promise.all([
         fetchAffiliateSummary(),
-        novaHost.from("expert_advisors").select("id, name, display_name"),
+        novaHost
+          .from("expert_advisors")
+          .select("id, name, display_name")
+          .eq("user_id", user?.id ?? ""),
       ]);
       setSummary(res);
       setRobots((eas.data ?? []) as Robot[]);
@@ -245,7 +256,7 @@ export default function WebBuilder() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     void load();

@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 import { novaHost } from "@/integrations/novahost/client";
 
 interface Bucket {
@@ -32,10 +33,12 @@ function emptyBuckets(): Bucket[] {
 }
 
 export function LicenseChart() {
+  const { user } = useAuth();
   const [data, setData] = useState<Bucket[]>([]);
   const [status, setStatus] = useState<Status>("loading");
 
   useEffect(() => {
+    if (!user) return;
     let cancelled = false;
 
     async function load() {
@@ -45,9 +48,16 @@ export function LicenseChart() {
       since.setHours(0, 0, 0, 0);
 
       try {
+        /*
+         * `.eq("user_id", ...)` is not redundant with RLS. An account that is
+         * also in `admin_users` passes the "Admins manage all licenses" policy,
+         * so without this filter the owner's own dashboard plotted every
+         * licence on the platform next to a KPI row counting only their own.
+         */
         const { data: rows, error } = await novaHost
           .from("licenses")
           .select("created_at")
+          .eq("user_id", user!.id)
           .gte("created_at", since.toISOString());
 
         if (error) throw error;
@@ -74,7 +84,7 @@ export function LicenseChart() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user]);
 
   const total = data.reduce((sum, b) => sum + b.activations, 0);
 
