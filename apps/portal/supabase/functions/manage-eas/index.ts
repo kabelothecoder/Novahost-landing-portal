@@ -103,36 +103,54 @@ Deno.serve(async (req) => {
       product = created!;
     }
 
-    // Ensure default Lifetime plan exists
-    const lifetimeCode = 'LIFETIME';
-    const lifetime = await admin
-      .from('plans')
-      .select('id, code, name, duration_days, max_devices')
-      .eq('product_id', product.id)
-      .eq('code', lifetimeCode)
-      .maybeSingle();
+    // Ensure the three standard plans exist for this robot: Week, Month,
+    // Lifetime. A robot registered before these existed only has Lifetime,
+    // and picks up the other two the next time its mentor hits this endpoint
+    // -- same idempotent find-or-create the single-plan version used, just
+    // run once per plan instead of once total.
+    const PLAN_DEFS: { code: string; name: string; duration_days: number | null }[] = [
+      { code: 'WEEK', name: '1 Week', duration_days: 7 },
+      { code: 'MONTH', name: '1 Month', duration_days: 30 },
+      { code: 'LIFETIME', name: 'Lifetime', duration_days: null },
+    ];
 
-    let plan = lifetime.data;
-    if (!plan) {
-      const { data: createdPlan, error: planErr } = await admin
+    const plans: { id: string; code: string; name: string; duration_days: number | null; max_devices: number }[] = [];
+    for (const def of PLAN_DEFS) {
+      const existingPlan = await admin
         .from('plans')
-        .insert({
-          product_id: product.id,
-          code: lifetimeCode,
-          name: 'Lifetime',
-          duration_days: null,
-          max_devices: 1,
-        })
         .select('id, code, name, duration_days, max_devices')
+        .eq('product_id', product.id)
+        .eq('code', def.code)
         .maybeSingle();
 
-      if (planErr) {
-        return new Response(JSON.stringify({ error: `Failed to create default plan: ${planErr.message}` }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      let planRow = existingPlan.data;
+      if (!planRow) {
+        const { data: createdPlan, error: planErr } = await admin
+          .from('plans')
+          .insert({
+            product_id: product.id,
+            code: def.code,
+            name: def.name,
+            duration_days: def.duration_days,
+            max_devices: 1,
+          })
+          .select('id, code, name, duration_days, max_devices')
+          .maybeSingle();
+
+        if (planErr) {
+          return new Response(JSON.stringify({ error: `Failed to create ${def.name} plan: ${planErr.message}` }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        }
+        planRow = createdPlan!;
       }
-      plan = createdPlan!;
+      plans.push(planRow!);
     }
 
-    return new Response(JSON.stringify({ product, defaultPlan: plan }), { status: 201, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    // Kept as the Lifetime row specifically: nothing in the frontend reads
+    // defaultPlan today, but it existed before this change and cost nothing
+    // to preserve for whatever calls this next.
+    const plan = plans.find(p => p.code === 'LIFETIME')!;
+
+    return new Response(JSON.stringify({ product, defaultPlan: plan, plans }), { status: 201, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
   } catch (e) {
     return new Response(JSON.stringify({ error: 'Unexpected error', details: String(e) }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
   }
