@@ -364,7 +364,19 @@ export default function GenerateKey() {
         }
       });
 
-      if (error) throw error;
+      if (error || !data || data.error) {
+        // invoke() puts a non-2xx body inside `error`, not `data`, so the
+        // function's own reason ("Email sender is not configured", "That
+        // licence key does not belong to you") was being replaced by the
+        // SDK's generic "Edge Function returned a non-2xx status code" --
+        // dig it back out of the response the SDK stashed on the error,
+        // same as handleSubmit above does for generate-license.
+        const detail = error
+          ? await (error as { context?: Response }).context?.clone()?.json().catch(() => null)
+          : null;
+        const msg = data?.error || detail?.error || error?.message || "Failed to dispatch email";
+        throw new Error(msg);
+      }
 
       // The function has never returned a `simulated` field -- it either
       // sends through Resend or returns an error -- so there was only ever
