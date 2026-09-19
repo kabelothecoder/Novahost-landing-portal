@@ -66,7 +66,8 @@ export default function Licences() {
         q &&
         !(r.licenseKey ?? "").toLowerCase().includes(q) &&
         !(r.ownerEmail ?? "").toLowerCase().includes(q) &&
-        !(r.robot ?? "").toLowerCase().includes(q)
+        !(r.robot ?? "").toLowerCase().includes(q) &&
+        !(r.mentor ?? "").toLowerCase().includes(q)
       ) {
         return false;
       }
@@ -129,7 +130,7 @@ export default function Licences() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Key, owner or robot"
+              placeholder="Key, owner, robot or mentor"
               className="h-9 w-[210px] pl-8 text-[13px]"
             />
           </div>
@@ -146,7 +147,7 @@ export default function Licences() {
         </Tabs>
 
         {loading ? (
-          <TableSkeleton rows={8} cols={7} />
+          <TableSkeleton rows={8} cols={9} />
         ) : !filtered.length ? (
           <Empty
             title={query || filter !== "all" ? "Nothing matches those filters" : "No licences yet"}
@@ -158,7 +159,9 @@ export default function Licences() {
                 <TableRow>
                   <TableHead>Key</TableHead>
                   <TableHead>Owner</TableHead>
+                  <TableHead>Mentor</TableHead>
                   <TableHead>Robot</TableHead>
+                  <TableHead>Paid</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Devices</TableHead>
                   <TableHead>Auto</TableHead>
@@ -179,7 +182,21 @@ export default function Licences() {
                     <TableCell className="max-w-[200px] truncate text-muted-foreground">
                       {r.ownerEmail ?? "—"}
                     </TableCell>
+                    <TableCell className="max-w-[160px] truncate text-muted-foreground">
+                      {r.mentor ?? "—"}
+                    </TableCell>
                     <TableCell className="max-w-[160px] truncate">{r.robot ?? "—"}</TableCell>
+                    <TableCell>
+                      {r.appPaid === null ? (
+                        <span className="text-[12.5px] text-muted-foreground">—</span>
+                      ) : r.appPaid ? (
+                        <Badge variant="secondary" className="font-normal text-success">
+                          Paid
+                        </Badge>
+                      ) : (
+                        <span className="text-[12.5px] text-muted-foreground">Unpaid</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {r.expired ? (
                         <Badge variant="destructive" className="font-normal">

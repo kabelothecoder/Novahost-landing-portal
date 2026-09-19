@@ -517,11 +517,11 @@ Deno.serve(async (req: Request) => {
 
     // ---- licenses ----------------------------------------------------------
     if (action === "licenses") {
-      const [licRes, actRes, eaRes, ticketRes, cfgRes] = await Promise.all([
+      const [licRes, actRes, eaRes, ticketRes, cfgRes, mentorRes, saleRes] = await Promise.all([
         svc
           .from("licenses")
           .select(
-            "id, license_key, owner_email, owner_id, status, issued_at, expires_at, max_devices, ea_id, is_master, auto_execute, created_at",
+            "id, license_key, owner_email, owner_id, user_id, status, issued_at, expires_at, max_devices, ea_id, is_master, auto_execute, created_at",
           )
           .order("created_at", { ascending: false }),
         svc.from("device_activations").select("id, license_id, device_id, status, activated_at, last_seen_at"),
@@ -531,8 +531,23 @@ Deno.serve(async (req: Request) => {
           .select("id, email, target_device_id, attempts, expires_at, verified_at, consumed_at, created_at")
           .order("created_at", { ascending: false }),
         svc.from("license_symbol_config").select("license_id"),
+        svc.from("profiles").select("id, full_name, display_name"),
+        // Whether the app was actually paid for, not whether a key was issued
+        // -- CLAUDE.md: "Generating a licence key is not a sale." Reads the
+        // service role only; the view revokes anon/authenticated entirely.
+        svc.from("affiliate_license_sales").select("license_id, app_paid"),
       ]);
-      for (const r of [licRes, actRes, eaRes, ticketRes, cfgRes]) if (r.error) throw r.error;
+      for (const r of [licRes, actRes, eaRes, ticketRes, cfgRes, mentorRes, saleRes]) if (r.error) throw r.error;
+
+      const mentorById = new Map(
+        (mentorRes.data ?? []).map((p) => [
+          String(p.id),
+          (p.display_name as string) || (p.full_name as string) || null,
+        ]),
+      );
+      const appPaidByLicense = new Map(
+        (saleRes.data ?? []).map((s) => [String(s.license_id), Boolean(s.app_paid)]),
+      );
 
       const activations = actRes.data ?? [];
       const byLicence = new Map<string, typeof activations>();
@@ -575,6 +590,8 @@ Deno.serve(async (req: Request) => {
           isMaster: Boolean(l.is_master),
           autoExecute: Boolean(l.auto_execute),
           robot: l.ea_id ? eaByAny.get(String(l.ea_id)) ?? String(l.ea_id) : null,
+          mentor: l.user_id ? mentorById.get(String(l.user_id)) ?? null : null,
+          appPaid: appPaidByLicense.get(String(l.id)) ?? null,
           createdAt: (l.created_at as string) ?? null,
           deviceCount: devices.length,
           lastSeenAt: lastSeen,

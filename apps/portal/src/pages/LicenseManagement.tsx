@@ -16,6 +16,7 @@ import { novaHost } from "@/integrations/novahost/client";
 import { Check, Copy, RefreshCw, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { fetchAffiliateSummary } from "@/lib/affiliate";
 
 interface DBLicense {
   id: string;
@@ -44,9 +45,13 @@ interface Row {
   linked: boolean;
   status: string;
   expiresAt: string | null;
+  /** Null means "we don't know" (the affiliate call failed or has no row for
+   *  this key yet) -- distinct from a confirmed false, which means issued but
+   *  not paid for. */
+  appPaid: boolean | null;
 }
 
-function toRow(lic: DBLicense): Row {
+function toRow(lic: DBLicense, appPaidByKey: Map<string, boolean>): Row {
   const meta = (lic.metadata ?? {}) as Record<string, string | undefined>;
   const activations = lic.device_activations ?? [];
   return {
@@ -59,6 +64,7 @@ function toRow(lic: DBLicense): Row {
     linked: activations.length > 0,
     status: lic.status,
     expiresAt: lic.expires_at,
+    appPaid: appPaidByKey.get(lic.license_key.toUpperCase()) ?? null,
   };
 }
 
@@ -75,6 +81,7 @@ const truncate = (id: string) => (id.length > 14 ? id.slice(0, 8) + "…" + id.s
 
 export default function LicenseManagement() {
   const [licenses, setLicenses] = useState<DBLicense[]>([]);
+  const [appPaidByKey, setAppPaidByKey] = useState<Map<string, boolean>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [query, setQuery] = useState("");
@@ -115,6 +122,28 @@ export default function LicenseManagement() {
     }
   }, []);
 
+  // Whether the app was actually paid for is a fact about PayFast, not about
+  // the licence row -- it only exists in affiliate_license_sales, reached
+  // through mentor-affiliate the same way the Commission page reads it.
+  // Failing to load this must never block the licence list itself: a key
+  // just shows "—" for Paid instead of Yes/No.
+  useEffect(() => {
+    let cancelled = false;
+    fetchAffiliateSummary()
+      .then((summary) => {
+        if (cancelled) return;
+        const map = new Map<string, boolean>();
+        for (const sale of summary.sales ?? []) {
+          map.set(sale.licenseKey.toUpperCase(), sale.appPaid);
+        }
+        setAppPaidByKey(map);
+      })
+      .catch((e) => {
+        console.warn("Could not load payment status for licences:", e);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     fetchLicenses();
   }, [fetchLicenses]);
@@ -133,7 +162,10 @@ export default function LicenseManagement() {
     }
   };
 
-  const rows = useMemo(() => licenses.map(toRow), [licenses]);
+  const rows = useMemo(
+    () => licenses.map((lic) => toRow(lic, appPaidByKey)),
+    [licenses, appPaidByKey],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -204,6 +236,7 @@ export default function LicenseManagement() {
                     <TableHead className="section-label h-9">Owner</TableHead>
                     <TableHead className="section-label h-9">Robot</TableHead>
                     <TableHead className="section-label h-9">Device</TableHead>
+                    <TableHead className="section-label h-9">Paid</TableHead>
                     <TableHead className="section-label h-9">Expires</TableHead>
                     <TableHead className="section-label h-9 pr-5 text-right">Status</TableHead>
                   </TableRow>
@@ -250,6 +283,9 @@ export default function LicenseManagement() {
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {row.deviceId ? truncate(row.deviceId) : "Not linked"}
                       </TableCell>
+                      <TableCell>
+                        <PaidPill paid={row.appPaid} />
+                      </TableCell>
                       <TableCell className="tabular text-sm text-muted-foreground">
                         {formatDate(row.expiresAt)}
                       </TableCell>
@@ -280,7 +316,10 @@ export default function LicenseManagement() {
                         />
                         <span className="truncate">{row.robot}</span>
                       </span>
-                      <StatusPill status={row.status} linked={row.linked} />
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <PaidPill paid={row.appPaid} />
+                        <StatusPill status={row.status} linked={row.linked} />
+                      </div>
                     </div>
                     <code className="block font-mono text-xs text-muted-foreground">{row.key}</code>
                     <p className="truncate text-xs text-muted-foreground">{row.owner}</p>
@@ -292,6 +331,32 @@ export default function LicenseManagement() {
         )}
       </Card>
     </div>
+  );
+}
+
+/**
+ * Whether the student paid PayFast for the app, not whether a key was
+ * issued -- CLAUDE.md's rule that generating a key is not a sale applies to
+ * this column exactly. Null (the affiliate call failed, or this key has no
+ * row yet) reads as a dash rather than a false "No".
+ */
+function PaidPill({ paid }: { paid: boolean | null }) {
+  if (paid === null) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium",
+        paid ? "border-long/30 bg-long/10 text-long" : "border-border bg-muted text-muted-foreground",
+      )}
+    >
+      <span
+        className={cn("h-1.5 w-1.5 rounded-full", paid ? "bg-long" : "bg-muted-foreground")}
+        aria-hidden="true"
+      />
+      {paid ? "Paid" : "Unpaid"}
+    </span>
   );
 }
 
