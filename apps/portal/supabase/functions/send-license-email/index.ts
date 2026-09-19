@@ -10,18 +10,78 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+
   try {
     const { licenseKey, email, eaName, planName } = await req.json().catch(() => ({}));
 
     if (!licenseKey || !email || !eaName || !planName) {
-      return new Response(JSON.stringify({ error: 'Missing licenseKey, email, eaName, or planName' }), { 
-        status: 400, 
-        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-      });
+      return json({ error: 'Missing licenseKey, email, eaName, or planName' }, 400);
+    }
+
+    // ---- Who is asking, and is this their key to send? -----------------------
+    // verify_jwt only proves the caller HAS a valid JWT -- the project's anon
+    // key is itself a valid signed JWT and it ships inside the mobile app, so
+    // without this block any caller could mail any licence key to any address.
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const novaHost = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      global: { fetch },
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    });
+
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return json({ error: 'Unauthorized - No auth header' }, 401);
+    }
+
+    const { data: { user }, error: userErr } = await novaHost.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (userErr || !user) {
+      return json({ error: 'Unauthorized', details: userErr?.message }, 401);
+    }
+
+    const { data: profile } = await novaHost
+      .from('profiles')
+      .select('approval_status')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (profile?.approval_status !== 'approved') {
+      return json({ error: 'Your account is pending approval.' }, 403);
+    }
+
+    // The key must belong to the caller -- without this, an approved mentor
+    // could email a DIFFERENT mentor's licence key to an address of their own
+    // choosing, since licenseKey/email/eaName/planName are otherwise just
+    // caller-supplied strings with nothing tying them to a real row.
+    const { data: license, error: licErr } = await novaHost
+      .from('licenses')
+      .select('id')
+      .eq('license_key', String(licenseKey).toUpperCase())
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (licErr) {
+      console.error('send-license-email: license lookup failed', licErr);
+      return json({ error: 'Could not verify that licence key. Try again.' }, 500);
+    }
+    if (!license) {
+      return json({ error: 'That licence key does not belong to you.' }, 403);
     }
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     const smtpHost = Deno.env.get('SMTP_HOST');
+
+    // Sender address. There is no working default here on purpose: Resend's
+    // onboarding@resend.dev sandbox sender delivers ONLY to the Resend account
+    // owner, so a fallback to it does not fail -- it succeeds silently for
+    // every test send and fails silently for every real buyer, which is
+    // exactly the shape of bug that is hardest to notice. RESEND_FROM must be
+    // a sender on a domain verified in Resend (novahost-ea.app).
+    const mailFrom = Deno.env.get('RESEND_FROM');
+    if (!mailFrom) {
+      console.error('send-license-email: RESEND_FROM is not set');
+      return json({ error: 'Email sender is not configured. Set RESEND_FROM in the edge function secrets.' }, 500);
+    }
 
     // Where the app can actually be downloaded. Set APP_DOWNLOAD_URL once the
     // APK has a home; until then the button is omitted rather than pointed at a
@@ -30,14 +90,6 @@ Deno.serve(async (req) => {
     // it landed on a registrar placeholder holding a licence key they could not
     // use.
     const downloadUrl = Deno.env.get('APP_DOWNLOAD_URL') ?? '';
-
-    // Sender address. Resend's onboarding@resend.dev works without verifying a
-    // domain but will only deliver to the Resend account owner, so it is a
-    // testing default and not a shipping one. Set MAIL_FROM to a verified
-    // sender once the real domain is live -- the previous SMTP default was
-    // no-reply@novahost.co, a parked domain with no mail configured, so that
-    // path could never have delivered anything.
-    const mailFrom = Deno.env.get('MAIL_FROM') ?? 'NovaHost <onboarding@resend.dev>';
 
     // Table layout and inline styles throughout: Outlook and Gmail strip most
     // <style> blocks and support neither flexbox nor grid. The visor gradient is
@@ -185,19 +237,24 @@ Deno.serve(async (req) => {
       if (!res.ok) {
         const errText = await res.text();
         console.error('send-license-email: Resend API error', errText);
-        throw new Error(`Resend transmission failed: ${errText}`);
+        // Surface Resend's own reason -- the most common one, until the
+        // sending domain is verified, is the sandbox sender refusing any
+        // recipient other than the account owner.
+        let reason = errText;
+        try {
+          const parsed = JSON.parse(errText);
+          reason = parsed?.message ?? parsed?.error ?? errText;
+        } catch { /* keep raw text */ }
+        return json({ error: `Email provider rejected the send: ${reason}` }, 502);
       }
 
       const resData = await res.json();
-      return new Response(JSON.stringify({ success: true, provider: 'resend', id: resData.id }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return json({ success: true, provider: 'resend', id: resData.id });
     } else if (smtpHost) {
       console.log('send-license-email: Sending via SMTP');
       // Import safe_smtp dynamically to avoid bundling issues
       const { SMTPClient } = await import("https://deno.land/x/safe_smtp/mod.ts");
-      
+
       const client = new SMTPClient({
         connection: {
           hostname: smtpHost,
@@ -219,25 +276,14 @@ Deno.serve(async (req) => {
 
       await client.close();
 
-      return new Response(JSON.stringify({ success: true, provider: 'smtp' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return json({ success: true, provider: 'smtp' });
     } else {
       console.error('send-license-email: No email credentials found. Production environment is not configured.');
-      return new Response(JSON.stringify({ 
-        error: 'No email service credentials configured. Please set RESEND_API_KEY or SMTP_HOST in the edge function secrets.' 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return json({ error: 'No email service credentials configured. Set RESEND_API_KEY or SMTP_HOST in the edge function secrets.' }, 500);
     }
 
   } catch (e) {
     console.error('send-license-email: Error', e);
-    return new Response(JSON.stringify({ error: 'Unexpected error sending email', details: String(e) }), { 
-      status: 500, 
-      headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-    });
+    return json({ error: 'Unexpected error sending email', details: String(e) }, 500);
   }
 });
