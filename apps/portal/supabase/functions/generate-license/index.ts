@@ -5,6 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const MAX_BATCH = 100;
+
 function randomSegment() {
   const arr = new Uint32Array(1);
   crypto.getRandomValues(arr);
@@ -39,11 +41,19 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized - No auth header' }), { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
-    const { ea, plan, username, metadata: extraMeta, allowed_symbols } = await req.json().catch(() => ({}));
+    const { ea, plan, username, metadata: extraMeta, allowed_symbols, count: rawCount, label } = await req.json().catch(() => ({}));
 
     if (!ea || !plan) {
       return new Response(JSON.stringify({ error: 'Missing ea or plan' }), { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
+
+    // Bulk generation: 1 by default, capped at MAX_BATCH so one call cannot
+    // blow through a mentor's whole quota (or produce an unreviewable wall of
+    // keys) from a single mistyped number.
+    const parsedCount = Number(rawCount);
+    const count = Number.isFinite(parsedCount) && parsedCount >= 1
+      ? Math.min(Math.floor(parsedCount), MAX_BATCH)
+      : 1;
 
     const { data: { user }, error: userErr } = await novaHost.auth.getUser(authHeader.replace('Bearer ', ''));
     if (userErr || !user) {
@@ -54,14 +64,36 @@ Deno.serve(async (req) => {
     // Signing up does not make you a mentor -- an admin has to approve the
     // account first. The portal hides this page from a pending account, but the
     // function is reachable directly, so the refusal has to live here too.
-    const { data: approval } = await novaHost
+    const { data: profile } = await novaHost
       .from('profiles')
-      .select('approval_status')
+      .select('approval_status, license_quota')
       .eq('id', user.id)
       .maybeSingle();
-    if (approval?.approval_status !== 'approved') {
-      console.warn(`generate-license: blocked ${approval?.approval_status ?? 'unknown'} account ${user.id}`);
+    if (profile?.approval_status !== 'approved') {
+      console.warn(`generate-license: blocked ${profile?.approval_status ?? 'unknown'} account ${user.id}`);
       return new Response(JSON.stringify({ error: 'Your account is pending approval.' }), { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    }
+
+    // Quota is a ceiling checked against a live count of what the mentor
+    // actually holds, not a decrementing balance -- so it can never drift out
+    // of sync with reality the way a counter that both sides have to remember
+    // to update would. Null quota means unlimited.
+    const quota = profile?.license_quota ?? null;
+    if (quota !== null) {
+      const { count: existingCount, error: countErr } = await novaHost
+        .from('licenses')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      if (countErr) {
+        console.error('generate-license: quota lookup failed', countErr);
+        return new Response(JSON.stringify({ error: 'Could not check your key quota. Try again.' }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
+      const used = existingCount ?? 0;
+      if (used + count > quota) {
+        return new Response(JSON.stringify({
+          error: `You have used ${used} of ${quota} licence keys. Generating ${count} more would go ${used + count - quota} over your limit. Request more keys from an admin.`,
+        }), { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
     }
 
     // --- Credits system bypassed for subscription model ---
@@ -121,57 +153,82 @@ Deno.serve(async (req) => {
     const year = new Date().getFullYear().toString().slice(-2);
     const prefix = `${planRow.code.slice(0, 2).toUpperCase()}${year}`;
 
-    let licenseKey = '';
-    let lastInsertErr: any = null;
-
     const getAbsoluteUrl = (path: any, fallback: string) => {
       if (!path || typeof path !== 'string' || path.trim() === '') return fallback;
       if (path.startsWith('http://') || path.startsWith('https://')) return path;
       return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path.replace(/^\//, '')}`;
     };
 
-    for (let i = 0; i < 5; i++) {
-      licenseKey = generateLicenseKey(prefix);
+    // A batch shares one id (for later lookup) and one label, with each row
+    // numbered against it. A single key keeps using the username exactly as
+    // typed, unchanged from before bulk generation existed.
+    const isBatch = count > 1;
+    const batchId = isBatch ? crypto.randomUUID() : null;
+    const batchLabel = (label && String(label).trim())
+      || (username && String(username).trim())
+      || `Batch ${new Date().toISOString().slice(0, 10)}`;
+
+    const buildRow = (index: number) => ({
+      owner_id: user.id,
+      user_id: user.id,
+      product_id: product.id,
+      ea_id: product.id,
+      plan_id: planRow.id,
+      license_key: generateLicenseKey(prefix),
+      max_devices: planRow.max_devices,
+      metadata: {
+        username: isBatch ? `${batchLabel} #${index + 1}` : username,
+        ...(isBatch ? { batch_id: batchId, batch_index: index + 1 } : {}),
+        expert_advisor_id: product.id,
+        robot_id: product.id,
+        robot_name: product.name,
+        robot_code: product.code,
+        plan_name: planRow.name,
+        plan_code: planRow.code,
+        display_name: product.display_name || product.name,
+        avatar_url: getAbsoluteUrl(product.avatar_url, `${SUPABASE_URL}/storage/v1/object/public/avatars/default_robot.png`),
+        background_image_url: getAbsoluteUrl(product.background_video_url, `${SUPABASE_URL}/storage/v1/object/public/avatars/default_background.png`),
+        symbols: Array.isArray(product.symbols) ? product.symbols : [],
+        ...(extraMeta ?? {}),
+      },
+      allowed_symbols: Array.isArray(product.symbols) ? product.symbols : [],
+    });
+
+    let lastInsertErr: any = null;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const rows = Array.from({ length: count }, (_, i) => buildRow(i));
       const { data: inserted, error: insErr } = await novaHost
         .from('licenses')
-        .insert({
-          owner_id: user.id,
-          user_id: user.id,
-          product_id: product.id,
-          ea_id: product.id,
-          plan_id: planRow.id,
-          license_key: licenseKey,
-          max_devices: planRow.max_devices,
-          metadata: { 
-            username, 
-            expert_advisor_id: product.id,
-            robot_id: product.id,
-            robot_name: product.name,
-            robot_code: product.code,
-            plan_name: planRow.name,
-            plan_code: planRow.code,
-            display_name: product.display_name || product.name,
-            avatar_url: getAbsoluteUrl(product.avatar_url, `${SUPABASE_URL}/storage/v1/object/public/avatars/default_robot.png`),
-            background_image_url: getAbsoluteUrl(product.background_video_url, `${SUPABASE_URL}/storage/v1/object/public/avatars/default_background.png`),
-            symbols: Array.isArray(product.symbols) ? product.symbols : [],
-            ...(extraMeta ?? {}) 
-          },
-          allowed_symbols: Array.isArray(product.symbols) ? product.symbols : []
-        })
-        .select('id, license_key, issued_at, expires_at, status, max_devices, ea_id')
-        .maybeSingle();
+        .insert(rows)
+        .select('id, license_key, issued_at, expires_at, status, max_devices, ea_id, metadata');
 
       if (!insErr && inserted) {
-        return new Response(JSON.stringify({
-          license: inserted,
-          product,
-          plan: planRow,
-        }), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        const body: Record<string, unknown> = { licenses: inserted, product, plan: planRow };
+        // count === 1 keeps returning `license` exactly as before bulk
+        // generation existed, so nothing already reading that field breaks.
+        if (isBatch) body.batch_id = batchId;
+        else body.license = inserted[0];
+        return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
       }
+
       lastInsertErr = insErr;
+      // A bulk insert is one statement -- a collision fails the whole batch,
+      // it never leaves a partial batch behind. Only a key collision (23505)
+      // is worth retrying with freshly generated keys: any other error (an
+      // RLS refusal, a bad foreign key) fails identically on every attempt,
+      // so retrying it just spends 5 attempts to report the wrong reason
+      // ("could not generate a unique key") for a problem that was never
+      // about uniqueness.
+      if (insErr?.code !== '23505') break;
     }
 
-    return new Response(JSON.stringify({ error: 'Failed to generate unique license key', details: lastInsertErr?.message }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    const isCollision = lastInsertErr?.code === '23505';
+    return new Response(JSON.stringify({
+      error: isCollision
+        ? 'Failed to generate a unique license key after 5 attempts. Try again.'
+        : (lastInsertErr?.message || 'Failed to create the license key.'),
+    }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
   } catch (e) {
     return new Response(JSON.stringify({ error: 'Unexpected error', details: String(e) }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
   }

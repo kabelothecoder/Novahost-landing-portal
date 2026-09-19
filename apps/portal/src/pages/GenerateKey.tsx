@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,6 +41,25 @@ interface GeneratedKey {
   description: string | null;
 }
 
+interface GeneratedBatch {
+  batchId: string | null;
+  label: string;
+  eaName: string;
+  planName: string;
+  keys: { licenseKey: string; username: string; expiresAt: string | null }[];
+}
+
+interface QuotaState {
+  used: number;
+  /** Null means unlimited -- there is no ceiling to check against. */
+  limit: number | null;
+}
+
+interface PendingRequest {
+  id: string;
+  requested: number;
+}
+
 const AVAILABLE_SYMBOLS = [
   "EURUSD", "GBPUSD", "USDJPY", "XAUUSD", "XAGUSD", 
   "NAS100", "US30", "SPX500", "BTCUSD", "ETHUSD", "VIX"
@@ -53,17 +73,30 @@ export default function GenerateKey() {
   const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState<{ username: string; ea: string; plan: string; confirmed: boolean }>({ username: "", ea: "", plan: "", confirmed: false });
   const [productOptions, setProductOptions] = useState<Product[]>([]);
-  const [availablePlans, setAvailablePlans] = useState<{ id: string; code: string; name: string }[]>([]);
+  const [availablePlans, setAvailablePlans] = useState<{ id: string; code: string; name: string; duration_days: number | null }[]>([]);
   const [recentKeys, setRecentKeys] = useState<GeneratedKey[]>([]);
   const [lastKey, setLastKey] = useState<GeneratedKey | null>(null);
-  
+  const [lastBatch, setLastBatch] = useState<GeneratedBatch | null>(null);
+  const [count, setCount] = useState(1);
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const [userId, setUserId] = useState<string | null>(null);
-  
+
+  // How many keys this mentor may hold, and whether they already have an
+  // outstanding ask for more. Refreshed after every successful generation and
+  // every request, so it never has to be trusted to stay right on its own.
+  const [quota, setQuota] = useState<QuotaState | null>(null);
+  const [pendingRequest, setPendingRequest] = useState<PendingRequest | null>(null);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [requestAmount, setRequestAmount] = useState(50);
+  const [requestReason, setRequestReason] = useState("");
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [emailTargetKey, setEmailTargetKey] = useState<GeneratedKey | null>(null);
   const [destinationEmail, setDestinationEmail] = useState("");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
-  
+
   const { toast } = useToast();
 
   // Load User
@@ -101,16 +134,45 @@ export default function GenerateKey() {
       if (!formData.ea) { setAvailablePlans([]); return; }
       const selected = productOptions.find(p => p.code === formData.ea || p.name === formData.ea);
       if (!selected) return;
+      // Shortest commitment first, Lifetime last: duration_days is null for
+      // Lifetime, and nullsFirst: false is what puts a null last in ascending
+      // order instead of first.
       const { data, error } = await novaHost
         .from("plans")
-        .select("id, code, name")
+        .select("id, code, name, duration_days")
         .eq("product_id", selected.id)
-        .order("name", { ascending: true });
+        .order("duration_days", { ascending: true, nullsFirst: false });
       if (!error) setAvailablePlans(data ?? []);
     })();
   }, [formData.ea, productOptions]);
 
   // Credits system disabled for direct monthly subscription model
+
+  // How many keys this mentor has against how many they are allowed, plus
+  // whether they already have a request an admin hasn't decided on yet.
+  // Pulled straight from the tables (both are owner-scoped by RLS) rather
+  // than through an edge function, since a mentor reading their own row
+  // needs no elevated privilege.
+  const loadQuota = useCallback(async () => {
+    if (!userId) return;
+    const [{ data: profile }, { count: used }] = await Promise.all([
+      novaHost.from("profiles").select("license_quota").eq("id", userId).maybeSingle(),
+      novaHost.from("licenses").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    ]);
+    setQuota({ used: used ?? 0, limit: profile?.license_quota ?? null });
+
+    const { data: pending } = await novaHost
+      .from("license_key_requests")
+      .select("id, requested")
+      .eq("mentor_id", userId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setPendingRequest(pending ?? null);
+  }, [userId]);
+
+  useEffect(() => { loadQuota(); }, [loadQuota]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,60 +190,149 @@ export default function GenerateKey() {
     // Derive robot metadata from selected EA
     const selectedProduct = productOptions.find(p => p.code === formData.ea);
     const eaDisplayName = selectedProduct?.name ?? formData.ea;
+    const planDisplayName = availablePlans.find(p => p.code === formData.plan)?.name ?? formData.plan;
 
-    const { data: rpcResponse, error } = await novaHost.functions.invoke("generate-license", {
-      body: {
-        ea: formData.ea,
-        plan: formData.plan,
-        username: formData.username,
-        is_master: false, // Explicitly false for new keys
-        metadata: {
-          // The robot own accent, not a hash of its name. `robot_type` was also
-          // written here — a strategy word chosen by hashing the display name,
-          // stored on every licence and read by nothing.
-          primary_color: selectedProduct?.accent_color ?? null,
-          product_id: selectedProduct?.id,
-          avatar: eaDisplayName,
-          name: eaDisplayName,
+    const safeCount = Math.min(100, Math.max(1, Math.floor(count) || 1));
+    const isBatch = safeCount > 1;
+
+    setIsGenerating(true);
+    try {
+      const { data: rpcResponse, error } = await novaHost.functions.invoke("generate-license", {
+        body: {
+          ea: formData.ea,
+          plan: formData.plan,
+          username: formData.username,
+          count: safeCount,
+          // The one text field means two things depending on count: a
+          // single key's username, or a whole batch's label. The backend
+          // only reads `label` when count > 1, so sending it unconditionally
+          // is harmless and keeps this call simple either way.
+          label: formData.username,
+          is_master: false, // Explicitly false for new keys
+          metadata: {
+            // The robot own accent, not a hash of its name. `robot_type` was also
+            // written here — a strategy word chosen by hashing the display name,
+            // stored on every licence and read by nothing.
+            primary_color: selectedProduct?.accent_color ?? null,
+            product_id: selectedProduct?.id,
+            avatar: eaDisplayName,
+            name: eaDisplayName,
+          },
         },
-      },
-    });
+      });
 
-    if (error || !rpcResponse || rpcResponse.error) {
-      // invoke() puts a non-2xx body inside `error`, not `data`, so the
-      // function's own reason ("EA (product) not found") would otherwise be
-      // replaced by the SDK's generic "Edge Function returned a non-2xx
-      // status code" -- dig it back out of the response the SDK stashed.
-      const detail = error
-        ? await (error as { context?: Response }).context?.clone()?.json().catch(() => null)
-        : null;
-      const msg = rpcResponse?.error || detail?.error || error?.message || "Failed to generate key. Check credits.";
-      toast({ title: "Error", description: msg, variant: "destructive" });
-      return;
+      if (error || !rpcResponse || rpcResponse.error) {
+        // invoke() puts a non-2xx body inside `error`, not `data`, so the
+        // function's own reason ("EA (product) not found") would otherwise be
+        // replaced by the SDK's generic "Edge Function returned a non-2xx
+        // status code" -- dig it back out of the response the SDK stashed.
+        const detail = error
+          ? await (error as { context?: Response }).context?.clone()?.json().catch(() => null)
+          : null;
+        const msg = rpcResponse?.error || detail?.error || error?.message || "Failed to generate key. Check credits.";
+        toast({ title: "Error", description: msg, variant: "destructive" });
+        return;
+      }
+
+      type InsertedLicense = {
+        id: string; license_key: string; issued_at: string; expires_at: string | null;
+        status: string; metadata?: { username?: string };
+      };
+      const insertedKeys: InsertedLicense[] = rpcResponse.licenses ?? [rpcResponse.license];
+
+      const asGeneratedKeys: GeneratedKey[] = insertedKeys.map(k => ({
+        id: k.id,
+        username: k.metadata?.username ?? formData.username,
+        ea: formData.ea,
+        eaName: eaDisplayName,
+        plan: formData.plan,
+        licenseKey: k.license_key,
+        createdAt: new Date(k.issued_at).toLocaleString(),
+        status: (k.status as GeneratedKey["status"]) || 'active',
+        accentColor: selectedProduct?.accent_color ?? null,
+        artUrl: selectedProduct?.avatar_url ?? null,
+        description: selectedProduct?.description ?? null,
+      }));
+
+      setRecentKeys(prev => [...asGeneratedKeys, ...prev]);
+
+      if (isBatch) {
+        setLastKey(null);
+        setLastBatch({
+          batchId: rpcResponse.batch_id ?? null,
+          label: formData.username,
+          eaName: eaDisplayName,
+          planName: planDisplayName,
+          keys: insertedKeys.map(k => ({
+            licenseKey: k.license_key,
+            username: k.metadata?.username ?? "",
+            expiresAt: k.expires_at,
+          })),
+        });
+        toast({ title: "Keys generated!", description: `${insertedKeys.length} license keys ready for ${eaDisplayName}` });
+      } else {
+        setLastBatch(null);
+        setLastKey(asGeneratedKeys[0]);
+        toast({ title: "Key Generated!", description: `License ready for ${asGeneratedKeys[0].username} — ${eaDisplayName}` });
+      }
+
+      // Subscription model does not track credit balance
+
+      setFormData({ username: "", ea: "", plan: "", confirmed: false });
+      setCount(1);
+      loadQuota();
+      try { (await import("@/lib/notify")).playNotificationSound(); } catch {}
+    } finally {
+      setIsGenerating(false);
     }
+  };
 
-    const newKey: GeneratedKey = {
-      id: rpcResponse.license.id,
-      username: formData.username,
-      ea: formData.ea,
-      eaName: eaDisplayName,
-      plan: formData.plan,
-      licenseKey: rpcResponse.license.license_key,
-      createdAt: new Date(rpcResponse.license.issued_at).toLocaleString(),
-      status: rpcResponse.license.status || 'active',
-      accentColor: selectedProduct?.accent_color ?? null,
-      artUrl: selectedProduct?.avatar_url ?? null,
-      description: selectedProduct?.description ?? null,
-    };
+  const downloadBatchCsv = useCallback(() => {
+    if (!lastBatch) return;
+    const header = ["Key", "Username", "Robot", "Plan", "Expires"];
+    const rows = lastBatch.keys.map(k => [
+      k.licenseKey,
+      k.username,
+      lastBatch.eaName,
+      lastBatch.planName,
+      k.expiresAt ? new Date(k.expiresAt).toLocaleDateString() : "Lifetime",
+    ]);
+    // Quote every cell and escape embedded quotes -- a comma or a quote
+    // inside a batch label would otherwise silently shift columns.
+    const csv = [header, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(lastBatch.label || "keys").replace(/[^a-z0-9]+/gi, "_")}_keys.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [lastBatch]);
 
-    setRecentKeys(prev => [newKey, ...prev]);
-    setLastKey(newKey);
-    
-    // Subscription model does not track credit balance
-    
-    setFormData({ username: "", ea: "", plan: "", confirmed: false });
-    toast({ title: "Key Generated!", description: `License ready for ${newKey.username} — ${eaDisplayName}` });
-    try { (await import("@/lib/notify")).playNotificationSound(); } catch {}
+  const handleRequestMore = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userId || requestAmount < 1) return;
+    setIsSubmittingRequest(true);
+    try {
+      const { data, error } = await novaHost
+        .from("license_key_requests")
+        .insert({ mentor_id: userId, requested: requestAmount, reason: requestReason.trim() || null })
+        .select("id, requested")
+        .single();
+      if (error) throw error;
+      setPendingRequest(data);
+      setRequestDialogOpen(false);
+      setRequestReason("");
+      toast({ title: "Request sent", description: `Asked for ${requestAmount} more keys. An admin will review it.` });
+    } catch (err: any) {
+      toast({ title: "Could not send request", description: err.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setIsSubmittingRequest(false);
+    }
   };
 
   const copyKey = useCallback((key: string) => {
@@ -215,18 +366,13 @@ export default function GenerateKey() {
 
       if (error) throw error;
 
-      if (data.simulated) {
-        toast({ 
-          title: "Simulation Successful", 
-          description: data.message,
-          variant: "default" 
-        });
-      } else {
-        toast({ 
-          title: "Email Sent!", 
-          description: `License key emailed successfully to ${destinationEmail.trim()}` 
-        });
-      }
+      // The function has never returned a `simulated` field -- it either
+      // sends through Resend or returns an error -- so there was only ever
+      // one real outcome to report here.
+      toast({
+        title: "Email Sent!",
+        description: `License key emailed successfully to ${destinationEmail.trim()}`
+      });
       setEmailModalOpen(false);
     } catch (err: any) {
       console.error(err);
@@ -277,8 +423,26 @@ export default function GenerateKey() {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Generate License Key</h1>
           <p className="text-muted-foreground">Create new license keys for Expert Advisors</p>
         </div>
-        <div className="flex items-center gap-3 bg-white/5 dark:bg-black/20 backdrop-blur-md rounded-xl p-2 px-4 border border-white/20 dark:border-white/10 shadow-sm glass-card text-xs font-mono uppercase tracking-widest text-primary font-bold">
-          Active Subscription Model
+        <div className="flex flex-wrap items-center gap-3">
+          {quota && (
+            <div className="flex items-center gap-2 bg-white/5 dark:bg-black/20 backdrop-blur-md rounded-xl p-2 px-4 border border-white/20 dark:border-white/10 shadow-sm glass-card text-xs font-mono uppercase tracking-widest text-primary font-bold">
+              <Coins className="w-3.5 h-3.5" />
+              {quota.limit === null ? "Unlimited keys" : `${quota.used} of ${quota.limit} keys used`}
+            </div>
+          )}
+          {quota && quota.limit !== null && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={!!pendingRequest}
+              onClick={() => { setRequestAmount(50); setRequestDialogOpen(true); }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {pendingRequest ? `Request pending (${pendingRequest.requested})` : "Request more keys"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -295,14 +459,30 @@ export default function GenerateKey() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username">{count > 1 ? "Batch label" : "Username"}</Label>
                 <Input
                   id="username"
                   value={formData.username}
                   onChange={e => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                  placeholder="Enter username"
+                  placeholder={count > 1 ? "e.g. September cohort" : "Enter username"}
+                  className="bg-background/50 backdrop-blur-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="count">How many</Label>
+                <Input
+                  id="count"
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={count}
+                  onChange={e => {
+                    const n = Number(e.target.value);
+                    setCount(Number.isFinite(n) ? Math.min(100, Math.max(1, Math.floor(n))) : 1);
+                  }}
                   className="bg-background/50 backdrop-blur-sm"
                 />
               </div>
@@ -362,12 +542,20 @@ export default function GenerateKey() {
               </div>
             )}
 
-            <Button 
-              type="submit" 
-              disabled={productOptions.length === 0}
+            <Button
+              type="submit"
+              disabled={productOptions.length === 0 || isGenerating}
               className="w-full md:w-auto shadow-[0_4px_15px_rgba(59,130,246,0.3)] hover:shadow-[0_4px_20px_rgba(59,130,246,0.5)] disabled:opacity-50 disabled:shadow-none transition-all"
             >
-              Generate License Key
+              {isGenerating ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Generating...
+                </span>
+              ) : count > 1 ? (
+                `Generate ${count} License Keys`
+              ) : (
+                "Generate License Key"
+              )}
             </Button>
           </form>
 
@@ -412,6 +600,49 @@ export default function GenerateKey() {
               <p className="text-xs text-muted-foreground">
                 Paste this key into the NovaHost app to activate.
               </p>
+            </div>
+          )}
+
+          {lastBatch && (
+            <div className="mt-8 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <div>
+                  <p className="text-sm font-bold text-foreground">{lastBatch.keys.length} keys generated — {lastBatch.label}</p>
+                  <p className="text-xs text-muted-foreground">{lastBatch.eaName} • {lastBatch.planName}</p>
+                </div>
+                <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={downloadBatchCsv}>
+                  <Download className="h-3.5 w-3.5" />
+                  Download CSV
+                </Button>
+              </div>
+              <div className="rounded-md border border-border/50 overflow-hidden bg-background/20 backdrop-blur-sm max-h-96 overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableHead className="font-medium">Key</TableHead>
+                      <TableHead className="font-medium">Username</TableHead>
+                      <TableHead className="font-medium">Expires</TableHead>
+                      <TableHead className="w-12"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lastBatch.keys.map(k => (
+                      <TableRow key={k.licenseKey}>
+                        <TableCell><code className="text-xs font-mono">{k.licenseKey}</code></TableCell>
+                        <TableCell className="text-sm">{k.username}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {k.expiresAt ? new Date(k.expiresAt).toLocaleDateString() : "Lifetime"}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="w-6 h-6 hover:bg-muted" onClick={() => copyKey(k.licenseKey)}>
+                            <Copy className="w-3 h-3 text-muted-foreground" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           )}
         </CardContent>
@@ -580,6 +811,63 @@ export default function GenerateKey() {
                 ) : (
                   <>Send Email</>
                 )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Request More Keys Modal */}
+      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+        <DialogContent className="glass-modal border-white/10 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5 text-primary" /> Request More Keys
+            </DialogTitle>
+            <DialogDescription className="text-white/60">
+              An admin will review this and decide how many to grant.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleRequestMore} className="space-y-4 mt-2">
+            <div className="space-y-2">
+              <Label htmlFor="request-amount" className="text-xs text-white/80">How many more</Label>
+              <Input
+                id="request-amount"
+                type="number"
+                min={1}
+                max={1000}
+                required
+                value={requestAmount}
+                onChange={e => setRequestAmount(Math.max(1, Math.floor(Number(e.target.value)) || 1))}
+                className="bg-white/5 border-white/10 text-white text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="request-reason" className="text-xs text-white/80">Reason (optional)</Label>
+              <Textarea
+                id="request-reason"
+                value={requestReason}
+                onChange={e => setRequestReason(e.target.value)}
+                placeholder="e.g. running a 100-student cohort in October"
+                className="bg-white/5 border-white/10 text-white text-sm"
+                rows={3}
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="bg-white/5 border-white/10 text-white rounded-xl"
+                onClick={() => setRequestDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmittingRequest}
+                className="bg-primary text-white rounded-xl shadow-lg shadow-primary/20"
+              >
+                {isSubmittingRequest ? "Sending..." : "Send Request"}
               </Button>
             </div>
           </form>
