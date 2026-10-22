@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, SlidersHorizontal } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DispatchStatus } from "@/components/DispatchStatus";
+import { WakeRobotsCard } from "@/components/WakeRobotsCard";
 import { ALL_ROBOTS, useTradeDispatch, type Side } from "@/hooks/useTradeDispatch";
 
 /**
@@ -222,12 +223,15 @@ export default function QuickTrade() {
         </CardContent>
       </Card>
 
-      <DispatchStatus
-        activeTerminals={activeTerminals}
-        clientsReached={clientsReached}
-        lastSignalSent={lastSignalSent}
-        hasSent={lastSignalIds.length > 0}
-      />
+      <div className="space-y-4">
+        <WakeRobotsCard targetId={targetId} targetName={targetName} />
+        <DispatchStatus
+          activeTerminals={activeTerminals}
+          clientsReached={clientsReached}
+          lastSignalSent={lastSignalSent}
+          hasSent={lastSignalIds.length > 0}
+        />
+      </div>
     </div>
   );
 }

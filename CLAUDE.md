@@ -66,9 +66,14 @@ advertised; PayFast collects R600 / R350 / R150 to absorb the card fee. Keep
 `generate-payfast-checkout`, `payfast-webhook` and the landing's `PRICES` in
 step, and do not "fix" one to match another.
 
-**The app cannot send push notifications.** No Web Push anywhere, and
-`new Notification()` is illegal in an iOS standalone web app. Never write copy
-that promises an alert.
+**Push reaches installed iPhones only, and speaks as the robot.** Web Push
+(2026-10-22): `push-subscribe` registers a phone, triggers on `signals` and
+`signal_executions` queue rows in `notifications`, and `send-notifications`
+delivers them, emailing licences with no phone subscribed. Android has no
+push. A Safari tab or a not-yet-installed app gets nothing, and only 11 of
+~244 active licences have an email on file, so copy must not promise that
+everyone is alerted. Alerts never name the mentor. The portal's wake-up button
+calls `wake-robots` (5-minute cooldown per robot).
 
 **Commission is counted in SQL, never in an app.** The affiliate programme's
 definition of a sale lives in `affiliate_license_sales` and the two scoreboard

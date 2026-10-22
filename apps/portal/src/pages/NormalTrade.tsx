@@ -15,6 +15,7 @@ import { Loader2, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { DispatchStatus } from "@/components/DispatchStatus";
+import { WakeRobotsCard } from "@/components/WakeRobotsCard";
 import {
   ALL_ROBOTS,
   useTradeDispatch,
@@ -413,12 +414,15 @@ export default function NormalTrade() {
         </Card>
       </div>
 
-      <DispatchStatus
-        activeTerminals={activeTerminals}
-        clientsReached={clientsReached}
-        lastSignalSent={lastSignalSent}
-        hasSent={lastSignalIds.length > 0}
-      />
+      <div className="space-y-4">
+        <WakeRobotsCard targetId={targetId} targetName={targetName} />
+        <DispatchStatus
+          activeTerminals={activeTerminals}
+          clientsReached={clientsReached}
+          lastSignalSent={lastSignalSent}
+          hasSent={lastSignalIds.length > 0}
+        />
+      </div>
     </div>
   );
 }
