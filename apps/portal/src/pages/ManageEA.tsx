@@ -14,13 +14,40 @@ import { RobotArtPreview } from "@/components/RobotArtPreview";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  ArrowLeft, Upload, Link, X, Bold, Italic, Eye, Palette,
+  ArrowLeft, Upload, Link, X, Bold, Italic, Eye, Palette, Film, Loader2,
   Save, RotateCcw, AlertTriangle, Sparkles, Layout, Settings
 } from "lucide-react";
 import { novaHost } from "@/integrations/novahost/client";
 import { playNotificationSound } from "@/lib/notify";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
+/* Robot loop video. The app plays it as the robot's art on Classic, Focus
+   Engine and Full-Bleed. The bucket enforces size and type too; duration only
+   the browser can read, so it is checked here. */
+const VIDEO_BUCKET = "robot-media";
+const VIDEO_MAX_SECONDS = 8;
+const VIDEO_MAX_BYTES = 10 * 1024 * 1024;
+const VIDEO_TYPES = ["video/mp4", "video/quicktime"];
+
+/** Resolves to the clip's length in seconds, read from its metadata. */
+function readVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(v.duration); };
+    v.onerror = () => { URL.revokeObjectURL(url); reject(new Error("This video could not be read. Try exporting it as MP4.")); };
+    v.src = url;
+  });
+}
+
+/** The storage path of a URL in our bucket, or null for anything else. */
+function videoPathOf(url: string): string | null {
+  const marker = `/storage/v1/object/public/${VIDEO_BUCKET}/`;
+  const i = url.indexOf(marker);
+  return i < 0 ? null : decodeURIComponent(url.slice(i + marker.length));
+}
 
 const AVAILABLE_SYMBOLS = [
   "EURUSD", "GBPUSD", "USDJPY", "XAUUSD", "XAGUSD", 
@@ -39,6 +66,10 @@ export default function ManageEA() {
   const [isSaving, setIsSaving] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoBusy, setVideoBusy] = useState(false);
+  const [videoError, setVideoError] = useState("");
 
   // Form state
   const [name, setName] = useState("");
@@ -59,6 +90,7 @@ export default function ManageEA() {
     description: string;
     imageUrl: string;
     accentColor: string;
+    videoUrl: string;
   } | null>(null);
 
   const [formErrors, setFormErrors] = useState<{ name?: string; description?: string; image?: string }>({});
@@ -95,6 +127,7 @@ export default function ManageEA() {
       setDescription(data.description || "");
       setImageUrl(data.avatar_url || "");
       setAccentColor(data.accent_color || "#3b82f6");
+      setVideoUrl(data.background_video_url || "");
       
       const loaded = {
         name: data.name || "",
@@ -104,6 +137,7 @@ export default function ManageEA() {
         description: data.description || "",
         imageUrl: data.avatar_url || "",
         accentColor: data.accent_color || "#3b82f6",
+        videoUrl: data.background_video_url || "",
       };
       setOriginalData(loaded);
     } catch (err: any) {
@@ -126,7 +160,8 @@ export default function ManageEA() {
     ttsScript !== originalData.ttsScript ||
     description !== originalData.description ||
     imageUrl !== originalData.imageUrl ||
-    accentColor !== originalData.accentColor
+    accentColor !== originalData.accentColor ||
+    videoUrl !== originalData.videoUrl
   ) : false;
 
   const handleReset = () => {
@@ -138,6 +173,8 @@ export default function ManageEA() {
       setDescription(originalData.description);
       setImageUrl(originalData.imageUrl);
       setAccentColor(originalData.accentColor);
+      setVideoUrl(originalData.videoUrl);
+      setVideoError("");
       setFormErrors({});
       toast({ description: "Form fields reset to original settings." });
     }
@@ -175,6 +212,7 @@ export default function ManageEA() {
           description: description.trim(),
           avatar_url: imageUrl.trim(),
           accent_color: accentColor,
+          background_video_url: videoUrl || null,
         })
         .eq("id", id)
         .eq("user_id", userId);
@@ -189,8 +227,15 @@ export default function ManageEA() {
         ttsScript: ttsScript.trim(),
         description: description.trim(),
         imageUrl: imageUrl.trim(),
-        accentColor: accentColor
+        accentColor: accentColor,
+        videoUrl: videoUrl
       });
+      // The replaced clip is no longer referenced; tidy it away. Best effort:
+      // a leftover file costs storage, not correctness.
+      const oldPath = originalData?.videoUrl ? videoPathOf(originalData.videoUrl) : null;
+      if (oldPath && originalData?.videoUrl !== videoUrl) {
+        novaHost.storage.from(VIDEO_BUCKET).remove([oldPath]).catch(() => {});
+      }
       playNotificationSound();
     } catch (err: any) {
       console.error(err);
@@ -213,6 +258,56 @@ export default function ManageEA() {
       setImageUrl(result);
     };
     reader.readAsDataURL(file);
+  };
+
+  // Loop video: checked, then uploaded straight away so Save only writes the link.
+  const handleVideoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !id) return;
+    setVideoError("");
+
+    if (!VIDEO_TYPES.includes(file.type)) {
+      setVideoError("Use an MP4 or MOV file. Those are what iPhones play.");
+      return;
+    }
+    if (file.size > VIDEO_MAX_BYTES) {
+      setVideoError(`This clip is ${(file.size / 1048576).toFixed(1)} MB. Keep it under 10 MB.`);
+      return;
+    }
+
+    setVideoBusy(true);
+    try {
+      const seconds = await readVideoDuration(file);
+      if (!isFinite(seconds) || seconds > VIDEO_MAX_SECONDS + 0.25) {
+        setVideoError(`This clip is ${Math.round(seconds)} seconds. Keep it to ${VIDEO_MAX_SECONDS} or less.`);
+        return;
+      }
+
+      const { data: sessionData } = await novaHost.auth.getSession();
+      const userId = sessionData?.session?.user.id;
+      if (!userId) throw new Error("Your session has ended. Sign in again.");
+
+      const ext = file.type === "video/quicktime" ? "mov" : "mp4";
+      const path = `${userId}/${id}/${Date.now()}.${ext}`;
+      const { error } = await novaHost.storage
+        .from(VIDEO_BUCKET)
+        .upload(path, file, { contentType: file.type, cacheControl: "31536000", upsert: false });
+      if (error) throw error;
+
+      // A clip uploaded and then replaced before saving is never referenced.
+      const prev = videoPathOf(videoUrl);
+      if (prev && videoUrl !== originalData?.videoUrl) {
+        novaHost.storage.from(VIDEO_BUCKET).remove([prev]).catch(() => {});
+      }
+      setVideoUrl(novaHost.storage.from(VIDEO_BUCKET).getPublicUrl(path).data.publicUrl);
+      toast({ description: "Video uploaded. Save to publish it to the app." });
+    } catch (err: any) {
+      console.error(err);
+      setVideoError(err?.message || "The upload failed. Try again.");
+    } finally {
+      setVideoBusy(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -405,6 +500,42 @@ export default function ManageEA() {
                   displayName={displayName || name}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Loop video */}
+          <Card className="glass-card border-white/10 overflow-hidden">
+            <CardHeader className="p-5 border-b border-white/5">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-white">
+                <Film className="w-4 h-4 text-secondary" /> Loop video
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Plays silently on repeat as your robot's art in the app. Up to {VIDEO_MAX_SECONDS} seconds, MP4 or MOV, under 10 MB. Your image still shows while the robot is stopped, and on phones with motion turned down.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 space-y-3">
+              {videoUrl ? (
+                <div className="rounded-xl overflow-hidden border border-white/10 bg-black">
+                  <video src={videoUrl} poster={imageUrl || undefined} autoPlay loop muted playsInline className="w-full aspect-[3/4] object-cover" />
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No video yet. The app shows your image.</p>
+              )}
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" disabled={videoBusy} onClick={() => videoInputRef.current?.click()} className="flex-1">
+                  {videoBusy ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />}
+                  {videoBusy ? "Uploading" : videoUrl ? "Replace video" : "Upload video"}
+                </Button>
+                {videoUrl && (
+                  <Button type="button" variant="ghost" size="sm" disabled={videoBusy} onClick={() => { setVideoUrl(""); setVideoError(""); }}>
+                    Remove
+                  </Button>
+                )}
+              </div>
+              <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime" onChange={handleVideoFile} className="hidden" />
+              {videoError && (
+                <p className="text-xs text-rose-400 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> {videoError}</p>
+              )}
             </CardContent>
           </Card>
         </div>
