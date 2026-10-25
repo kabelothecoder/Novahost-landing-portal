@@ -1,5 +1,4 @@
 import {
-  Apple,
   ArrowRight,
   BatteryCharging,
   Building2,
@@ -10,17 +9,21 @@ import {
   Gauge,
   Layers,
   MonitorOff,
-  ScanLine,
   Server,
   ShieldCheck,
   Smartphone,
   SlidersHorizontal,
+  Target,
+  Trophy,
+  Users,
   WifiOff,
   X,
 } from "lucide-react";
 import { Heading, Mark, SectionLabel, VISOR, VisorRule } from "@/components/Brand";
 import { DownloadButtons } from "@/components/DownloadButtons";
 import { Footer } from "@/components/Footer";
+import { CinematicHero } from "@/components/ui/cinematic-landing-hero";
+import PricingSection from "@/components/ui/pricing-section-1";
 import { Header } from "@/components/Header";
 import { Reveal } from "@/components/Reveal";
 import { PRICES } from "@/lib/site";
@@ -37,7 +40,7 @@ import { PRICES } from "@/lib/site";
  */
 const COMPARISON = [
   ["Somewhere to run it", "A PC left on, or a rented VPS", "Nothing. We run it for you"],
-  ["What it costs to keep running", "Electricity, or ~$15 a month for a VPS", "R0 a month"],
+  ["What it costs to keep running", "Electricity, or ~$15 a month for a VPS", "R"+PRICES.app+" per 30 days, hosting included"],
   ["When your machine is off", "The bot stops trading", "The bot keeps trading"],
   ["Setting it up", "Install MetaTrader, attach the EA, tune it", "Enter a key, connect your broker"],
   ["Watching it", "Remote desktop into the VPS", "Open the app"],
@@ -47,7 +50,7 @@ const STEPS = [
   {
     n: "01",
     title: "Get the app",
-    body: "Android downloads the APK. iPhone installs straight from the web — no App Store, no TestFlight. One payment, in Rand, and it is yours for good.",
+    body: "Open the app in your phone's browser — iPhone or Android — and add it to your home screen. No App Store, no Play Store. Pay in Rand through PayFast for 30 days of access.",
   },
   {
     n: "02",
@@ -116,43 +119,32 @@ const SCANNER_POINTS = [
   "Refuses images that are not charts, instead of inventing a read",
 ] as const;
 
-const PLANS = [
+/** The headline features for traders who run more than one account. */
+const POWER_FEATURES = [
   {
-    name: "App access",
-    price: PRICES.app,
-    tag: "Start here",
-    featured: true,
-    items: [
-      "Lifetime access, Android or iPhone",
-      "Your robot hosted and running 24/7",
-      "Risk controls and smart lot sizing",
-      "Any MT4 / MT5 broker",
-    ],
+    icon: Users,
+    title: "Multiple broker accounts",
+    body: "Run the same robot on more than one MT4/MT5 account from a single licence — your personal account and a funded one, side by side, each with its own lot size.",
+    points: ["One licence, several accounts", "Own lot multiplier per account", "Switch between them in the app"],
   },
   {
-    name: "AI chart scanner",
-    price: PRICES.scanner,
-    tag: "Add-on",
-    featured: false,
-    items: [
-      "Scan any chart screenshot",
-      "Entry, stop and target",
-      "Scored against your guardrails",
-      "Buy it whenever, or never",
-    ],
+    icon: Trophy,
+    title: "Funded & challenge accounts",
+    body: "Tag an account as a challenge or funded account, add the firm's daily loss limit and max drawdown, and track your progress to the phase target.",
+    points: ["Daily loss and max drawdown rules", "Phase 1, Phase 2 or Funded", "Lot size as a % of challenge balance"],
   },
   {
-    name: "Device move",
-    price: PRICES.deviceMove,
-    tag: "Only if you need it",
-    featured: false,
-    items: [
-      "Move your licence to a new phone",
-      "Keeps your existing key",
-      "Only when you change handsets",
-      "Not needed to get started",
-    ],
+    icon: Target,
+    title: "Daily target lock",
+    body: "Set a daily profit target and a loss limit. When one is hit, you choose: the robot stops for the day, or it keeps going.",
+    points: ["Stop at target, or keep trading", "Daily loss limit as a hard floor", "Alert the moment either is hit"],
   },
+] as const;
+
+const VOICE_POINTS = [
+  "Push to talk — it only listens while you hold the mic",
+  "Answers out loud, in the robot's own voice",
+  "Trade ideas are tap-to-confirm, never automatic",
 ] as const;
 
 const FAQ = [
@@ -178,7 +170,7 @@ const FAQ = [
   },
   {
     q: "Is this a subscription?",
-    a: "No. You pay once for the app, and once more only if you want the chart scanner. No monthly fee, and no billing token left sitting against your card afterwards.",
+    a: "No auto-billing. You pay R" + PRICES.app + " for 30 days of access, and renew from the app only if you want to. No billing token is left sitting against your card.",
   },
   {
     q: "Which brokers work?",
@@ -187,11 +179,25 @@ const FAQ = [
   {
     q: "I got a new phone. Now what?",
     a:
-      "Your licence binds to one handset, so moving it is a paid step — R" +
-      PRICES.deviceMove +
-      ", which keeps your existing key and shifts it across. It exists to stop one key being shared around, not to charge you for upgrading.",
+      "Your licence binds to one handset, so moving it is a deliberate step from the app that keeps your existing key and shifts it across. It exists to stop one key being shared around, not to punish you for upgrading.",
   },
 ] as const;
+
+/** A captured app screen in a slim phone frame. */
+function AppScreen({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div className="relative mx-auto w-full max-w-[340px]">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-10 rounded-full opacity-[0.22] blur-[90px]"
+        style={{ background: VISOR }}
+      />
+      <div className="relative overflow-hidden rounded-[2.6rem] border border-[#2A2E3A] bg-black p-2 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.9)]">
+        <img src={src} alt={alt} loading="lazy" className="w-full rounded-[2.1rem]" />
+      </div>
+    </div>
+  );
+}
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -199,103 +205,7 @@ export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden">
       {/* ═══ HERO ═══════════════════════════════════════════════════════════ */}
-      <div className="px-3 pt-3 sm:px-4 sm:pt-4">
-        <section className="relative overflow-hidden rounded-[26px] bg-surface sm:rounded-[32px]">
-          {/* Magenta bloom one side, cyan the other — the visor's own two poles. */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute left-1/2 top-[-30%] h-[820px] w-[1180px] -translate-x-1/2 rounded-full opacity-[0.30] blur-[120px]"
-            style={{
-              background: "radial-gradient(closest-side, #C2298F 0%, #6D28D9 42%, transparent 72%)",
-            }}
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute left-[62%] top-[6%] h-[520px] w-[520px] rounded-full opacity-[0.24] blur-[110px]"
-            style={{ background: "radial-gradient(closest-side, #22C9E8 0%, transparent 70%)" }}
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 opacity-[0.05]"
-            style={{
-              backgroundImage:
-                "linear-gradient(#FFF 1px, transparent 1px), linear-gradient(90deg, #FFF 1px, transparent 1px)",
-              backgroundSize: "80px 80px",
-              maskImage: "radial-gradient(ellipse at 50% 30%, #000 30%, transparent 75%)",
-              WebkitMaskImage: "radial-gradient(ellipse at 50% 30%, #000 30%, transparent 75%)",
-            }}
-          />
-
-          <Header />
-
-          <div className="relative z-10 px-6 pb-24 pt-14 sm:px-10 sm:pb-28 sm:pt-20">
-            <div className="mx-auto max-w-[1140px]">
-              <Reveal index={0}>
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-2 backdrop-blur-sm">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan opacity-70" />
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-cyan" />
-                  </span>
-                  EA hosting &middot; Android &amp; iPhone
-                </span>
-              </Reveal>
-
-              <Reveal index={1}>
-                <h1
-                  className="mt-7 max-w-[16ch] font-display text-[clamp(2.6rem,7vw,4.6rem)] font-extrabold leading-[0.98] tracking-[-0.04em]"
-                  style={{ textWrap: "balance" }}
-                >
-                  Your trading bot,{" "}
-                  <span className="bg-clip-text text-transparent" style={{ backgroundImage: VISOR }}>
-                    off the PC
-                  </span>{" "}
-                  and onto your phone.
-                </h1>
-              </Reveal>
-
-              <Reveal index={2}>
-                <p className="mt-7 max-w-[58ch] text-[clamp(1rem,1.7vw,1.19rem)] leading-relaxed text-ink-3">
-                  An Expert Advisor only trades while MetaTrader is open on a computer. That is why
-                  people leave a laptop running all night, or rent a VPS they never log into.
-                  NovaHost hosts the robot instead &mdash; it trades your own broker account around
-                  the clock, and you watch it from an app.
-                </p>
-              </Reveal>
-
-              <Reveal index={3}>
-                <div className="mt-10">
-                  <DownloadButtons />
-                </div>
-              </Reveal>
-
-              <Reveal index={4}>
-                <p className="mt-5 text-[13.5px] text-ink-4">
-                  Works with any MT4 or MT5 broker. You will need a licence key for the robot you
-                  want to run.
-                </p>
-              </Reveal>
-
-              {/* The three claims a sceptic checks first. */}
-              <Reveal index={5}>
-                <dl className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.07] sm:grid-cols-3">
-                  {[
-                    ["No PC", "and no VPS to rent"],
-                    ["R0", "per month, forever"],
-                    ["Your broker", "your funds, your credentials"],
-                  ].map(([big, small]) => (
-                    <div key={small} className="bg-[#0A0B13] px-6 py-7">
-                      <dt className="font-display text-[26px] font-bold tracking-[-0.03em] text-ink">
-                        {big}
-                      </dt>
-                      <dd className="mt-1.5 text-[13.5px] leading-relaxed text-ink-4">{small}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </Reveal>
-            </div>
-          </div>
-        </section>
-      </div>
+      <CinematicHero header={<Header />} />
 
       {/* ═══ WHAT IT IS ═════════════════════════════════════════════════════ */}
       <section id="what-it-is" className="scroll-mt-20 px-6 py-24">
@@ -388,75 +298,46 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ═══ THE APP — both platforms ═══════════════════════════════════════ */}
+      {/* ═══ THE APP ═══════════════════════════════════════ */}
       <section id="the-app" className="scroll-mt-20 border-t border-hairline px-6 py-24">
         <div className="mx-auto max-w-[1140px]">
           <Reveal index={0}>
             <SectionLabel>03 &mdash; The app</SectionLabel>
-            <Heading className="max-w-[22ch]">Built twice, properly.</Heading>
+            <Heading className="max-w-[22ch]">One app, every phone.</Heading>
             <p className="mt-4 max-w-[58ch] text-[16px] leading-relaxed text-ink-3">
-              Android and iPhone are different machines and we did not paper over it. Each build
-              follows its own platform&rsquo;s conventions, and both talk to the same account.
+              The same app runs on iPhone and Android. Open it in your phone&rsquo;s browser, add it
+              to your home screen, and it opens full screen with its own icon &mdash; no App Store,
+              no Play Store, no waiting on a review.
             </p>
           </Reveal>
 
-          <div className="mt-14 grid gap-5 md:grid-cols-2">
-            <Reveal
-              index={1}
-              className="relative overflow-hidden rounded-2xl border border-edge bg-card p-8"
-            >
-              <VisorRule className="absolute inset-x-8 top-0" />
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[#23262F] bg-hairline">
-                <Smartphone size={19} className="text-cyan" />
-              </span>
-              <h3 className="mt-5 font-display text-[21px] font-bold tracking-[-0.02em]">Android</h3>
-              <p className="mt-3 text-[14.5px] leading-relaxed text-ink-3">
-                A native app, installed from a signed APK you download here. Material 3 throughout,
-                with a floating overlay so you can keep an eye on a position without leaving
-                whatever else you are doing.
-              </p>
-              <ul className="mt-6 space-y-2.5">
-                {["Native Kotlin build", "Signed APK, direct download", "Floating position overlay"].map(
-                  (t) => (
-                    <li key={t} className="flex items-start gap-2.5 text-[14px] text-ink-2">
-                      <Check size={15} className="mt-[3px] shrink-0 text-cyan" />
-                      <span>{t}</span>
-                    </li>
-                  ),
-                )}
-              </ul>
-            </Reveal>
+          <Reveal
+            index={1}
+            className="relative mt-14 overflow-hidden rounded-2xl border border-edge bg-card p-8"
+          >
+            <VisorRule className="absolute inset-x-8 top-0" />
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[#23262F] bg-hairline">
+              <Smartphone size={19} className="text-cyan" />
+            </span>
+            <h3 className="mt-5 font-display text-[21px] font-bold tracking-[-0.02em]">
+              iPhone &amp; Android
+            </h3>
+            <ul className="mt-6 grid gap-2.5 sm:grid-cols-2">
+              {[
+                "Add to Home Screen, done in seconds",
+                "Full screen, own icon, no browser bar",
+                "Updates arrive without a reinstall",
+                "Same account on whichever phone you use",
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-2.5 text-[14px] text-ink-2">
+                  <Check size={15} className="mt-[3px] shrink-0 text-cyan" />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
 
-            <Reveal
-              index={2}
-              className="relative overflow-hidden rounded-2xl border border-edge bg-card p-8"
-            >
-              <VisorRule className="absolute inset-x-8 top-0" />
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[#23262F] bg-hairline">
-                <Apple size={19} className="text-cyan" />
-              </span>
-              <h3 className="mt-5 font-display text-[21px] font-bold tracking-[-0.02em]">iPhone</h3>
-              <p className="mt-3 text-[14.5px] leading-relaxed text-ink-3">
-                Installs straight from Safari to your home screen &mdash; no App Store queue, no
-                TestFlight invite, no waiting on a review. Opens full screen with its own icon and
-                behaves like any other app on the phone.
-              </p>
-              <ul className="mt-6 space-y-2.5">
-                {[
-                  "Add to Home Screen, done in seconds",
-                  "Full screen, own icon, no browser bar",
-                  "Updates arrive without a reinstall",
-                ].map((t) => (
-                  <li key={t} className="flex items-start gap-2.5 text-[14px] text-ink-2">
-                    <Check size={15} className="mt-[3px] shrink-0 text-cyan" />
-                    <span>{t}</span>
-                  </li>
-                ))}
-              </ul>
-            </Reveal>
-          </div>
-
-          {/* ─── What both builds carry ─── */}
+          {/* ─── What the app carries ─── */}
           <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {FEATURES.map((f, i) => (
               <Reveal
@@ -478,7 +359,7 @@ export default function Home() {
           <Reveal index={5}>
             <p className="mt-8 flex items-center gap-2 text-[13.5px] text-ink-4">
               <CalendarClock size={14} className="shrink-0 text-cyan" />
-              Both builds carry the market wire and the week&rsquo;s economic calendar, so you know
+              The app carries the market wire and the week&rsquo;s economic calendar, so you know
               what is about to move before a position is open.
             </p>
           </Reveal>
@@ -489,7 +370,7 @@ export default function Home() {
       <section className="border-t border-hairline px-6 py-24">
         <div className="mx-auto grid max-w-[1140px] items-center gap-14 lg:grid-cols-2">
           <Reveal index={0}>
-            <SectionLabel>Optional add-on</SectionLabel>
+            <SectionLabel>AI chart scanner</SectionLabel>
             <Heading className="max-w-[18ch]">A second opinion on any chart.</Heading>
             <p className="mt-5 max-w-[52ch] text-[16px] leading-relaxed text-ink-3">
               Sometimes you want to take your own trade rather than the robot&rsquo;s. Screenshot
@@ -505,119 +386,92 @@ export default function Home() {
               ))}
             </ul>
             <p className="mt-8 text-[13.5px] text-ink-4">
-              Sold separately, once off. The app works fully without it.
+              One free scan every month is included with your plan.
             </p>
           </Reveal>
 
           <Reveal index={1}>
-            <div className="relative overflow-hidden rounded-3xl border border-edge bg-card p-8">
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -right-24 -top-24 h-[320px] w-[320px] rounded-full opacity-[0.18] blur-[90px]"
-                style={{ background: VISOR }}
-              />
-              <div className="relative">
-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#23262F] bg-hairline">
-                  <ScanLine size={22} className="text-cyan" />
-                </span>
-
-                {/*
-                  A sketch of the shape of the answer, not a screenshot: it stays
-                  honest when the app's own UI moves on, and nothing here claims
-                  to be a real trade.
-                */}
-                <div className="mt-7 space-y-2.5">
-                  {[
-                    ["Bias", "Long", "text-[#37D399]"],
-                    ["Entry", "3 341.20", "text-ink"],
-                    ["Stop", "3 328.60", "text-[#F0729E]"],
-                    ["Target", "3 366.40", "text-[#37D399]"],
-                  ].map(([label, value, tone]) => (
-                    <div
-                      key={label}
-                      className="flex items-center justify-between rounded-xl border border-[#1B1E27] bg-[#0A0B12] px-4 py-3"
-                    >
-                      <span className="font-mono text-[11.5px] uppercase tracking-[0.14em] text-ink-4">
-                        {label}
-                      </span>
-                      <span className={`font-mono text-[15px] font-bold tabular-nums ${tone}`}>
-                        {value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-5 rounded-xl border border-[#1B1E27] bg-[#0A0B12] px-4 py-3.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[11.5px] uppercase tracking-[0.14em] text-ink-4">
-                      Confluence
-                    </span>
-                    <span className="font-mono text-[13px] font-bold text-cyan">7 / 10</span>
-                  </div>
-                  <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
-                    <div className="h-full w-[70%] rounded-full" style={{ backgroundImage: VISOR }} />
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AppScreen src="/app/scanner.png" alt="NovaHost AI chart scanner screen" />
           </Reveal>
         </div>
       </section>
 
-      {/* ═══ PRICING ════════════════════════════════════════════════════════ */}
-      <section id="pricing" className="scroll-mt-20 border-t border-hairline px-6 py-24">
-        <div className="mx-auto max-w-[1140px]">
+      {/* ═══ VOICE ══════════════════════════════════════════════════════════ */}
+      <section className="border-t border-hairline px-6 py-24">
+        <div className="mx-auto grid max-w-[1140px] items-center gap-14 lg:grid-cols-2">
+          <Reveal index={1} className="order-2 lg:order-1">
+            <AppScreen src="/app/voice.png" alt="NovaHost home with the push-to-talk mic" />
+          </Reveal>
+          <Reveal index={0} className="order-1 lg:order-2">
+            <SectionLabel>New in the app</SectionLabel>
+            <Heading className="max-w-[18ch]">Talk to your robot.</Heading>
+            <p className="mt-5 max-w-[52ch] text-[16px] leading-relaxed text-ink-3">
+              Hold the mic and ask how the account is doing, what the robot just did, or what is on
+              the calendar. It answers out loud. Ask for a trade and it drafts the idea and waits
+              &mdash; nothing is sent until you tap to confirm.
+            </p>
+            <ul className="mt-8 space-y-3.5">
+              {VOICE_POINTS.map((t) => (
+                <li key={t} className="flex items-start gap-2.5 text-[15px] text-ink-2">
+                  <Check size={16} className="mt-[3px] shrink-0 text-cyan" />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══ POWER FEATURES ═════════════════════════════════════════════════ */}
+      <section id="features" className="relative scroll-mt-20 overflow-hidden border-t border-hairline px-6 py-24">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[900px] -translate-x-1/2 rounded-full opacity-[0.12] blur-[120px]"
+          style={{ background: VISOR }}
+        />
+        <div className="relative mx-auto max-w-[1140px]">
           <Reveal index={0}>
-            <SectionLabel>04 &mdash; Pricing</SectionLabel>
-            <Heading className="max-w-[20ch]">Pay once. No subscription.</Heading>
-            <p className="mt-4 max-w-[54ch] text-[16px] leading-relaxed text-ink-3">
-              One payment, in Rand, through PayFast. No monthly fee, no VPS bill, and no billing
-              token left sitting against your card afterwards.
+            <SectionLabel>Built for serious traders</SectionLabel>
+            <Heading className="max-w-[22ch]">Every account. Every rule. One robot.</Heading>
+            <p className="mt-4 max-w-[58ch] text-[16px] leading-relaxed text-ink-3">
+              Passing a prop-firm challenge, running a personal account next to a funded one, or
+              just want the robot to stop once the day is made &mdash; it is all in the app.
             </p>
           </Reveal>
 
-          <div className="mt-14 grid gap-5 md:grid-cols-3">
-            {PLANS.map((p, i) => (
+          <div className="mt-14 grid gap-5 lg:grid-cols-3">
+            {POWER_FEATURES.map((f, i) => (
               <Reveal
-                key={p.name}
+                key={f.title}
                 index={i + 1}
-                className="relative overflow-hidden rounded-2xl border bg-card p-7"
-                style={{ borderColor: p.featured ? "#2E3442" : "#1D2029" }}
+                className="relative overflow-hidden rounded-2xl border border-edge bg-card p-8"
               >
-                {p.featured && <VisorRule className="absolute inset-x-7 top-0" />}
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-4">
-                  {p.tag}
-                </p>
-                <h3 className="mt-3 font-display text-[20px] font-semibold tracking-[-0.015em]">
-                  {p.name}
-                </h3>
-                <p className="mt-5 flex items-baseline gap-1.5">
-                  <span className="text-[17px] font-medium text-ink-3">R</span>
-                  <span className="font-mono text-[42px] font-bold leading-none tracking-[-0.03em] tabular-nums">
-                    {p.price}
-                  </span>
-                  <span className="ml-1 text-[14px] text-ink-4">once-off</span>
-                </p>
-
-                <ul className="mt-7 space-y-3">
-                  {p.items.map((it) => (
-                    <li key={it} className="flex items-start gap-2.5 text-[14.5px] text-ink-3">
-                      <Check size={15} className="mt-1 shrink-0 text-cyan" />
-                      <span>{it}</span>
+                <VisorRule className="absolute inset-x-8 top-0" />
+                <span
+                  className="inline-flex h-12 w-12 items-center justify-center rounded-2xl text-ground"
+                  style={{ backgroundImage: VISOR }}
+                >
+                  <f.icon size={21} />
+                </span>
+                <h3 className="mt-6 font-display text-[21px] font-bold tracking-[-0.02em]">{f.title}</h3>
+                <p className="mt-3 text-[14.5px] leading-relaxed text-ink-3">{f.body}</p>
+                <ul className="mt-6 space-y-2.5">
+                  {f.points.map((t) => (
+                    <li key={t} className="flex items-start gap-2.5 text-[14px] text-ink-2">
+                      <Check size={15} className="mt-[3px] shrink-0 text-cyan" />
+                      <span>{t}</span>
                     </li>
                   ))}
                 </ul>
               </Reveal>
             ))}
           </div>
-
-          <Reveal index={4}>
-            <p className="mt-8 text-[13.5px] text-ink-4">
-              Prices include VAT where applicable. You buy the app once; the licence key for your
-              robot comes from whoever supplied it.
-            </p>
-          </Reveal>
         </div>
+      </section>
+
+      {/* ═══ PRICING ════════════════════════════════════════════════════════ */}
+      <section id="pricing" className="scroll-mt-20 border-t border-hairline">
+        <PricingSection />
       </section>
 
       {/* ═══ FAQ ════════════════════════════════════════════════════════════ */}
