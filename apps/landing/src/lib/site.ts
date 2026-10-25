@@ -39,7 +39,7 @@ export const IOS_APP_URL = import.meta.env.VITE_IOS_APP_URL || "https://app.nova
  *  absorb the card fee — see generate-payfast-checkout. Do not "fix" these to
  *  match the collected amount; the round number is the advertised price. */
 export const PRICES = {
-  app: 599,
+  app: 379,
   scanner: 349,
   deviceMove: 150,
 } as const;
