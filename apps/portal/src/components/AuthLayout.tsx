@@ -16,8 +16,8 @@ interface AuthLayoutProps {
 /**
  * The mark on its own left this as an unattributed password form on a domain
  * with no history — the shape Safe Browsing reads as credential harvesting,
- * and the first thing a reviewer sees, since "/" bounces anonymous visitors
- * straight here. Name the operator in text, say what the service is, and link
+ * and every deep link still bounces anonymous visitors straight here (only "/"
+ * gets the public Welcome page). Name the operator in text, say what the service is, and link
  * the legal pages, which existed all along with nothing pointing at them.
  */
 export function AuthLayout({ children, wide = false }: AuthLayoutProps) {
@@ -61,6 +61,12 @@ export function AuthLayout({ children, wide = false }: AuthLayoutProps) {
             ))}
           </nav>
           <p className="mt-2">
+            Part of {COMPANY.name} &middot;{" "}
+            <a href="https://novahost-ea.app" className="hover:underline">
+              novahost-ea.app
+            </a>
+          </p>
+          <p className="mt-1">
             &copy; {new Date().getFullYear()} {COMPANY.name} &middot; {COMPANY.address}
           </p>
         </footer>

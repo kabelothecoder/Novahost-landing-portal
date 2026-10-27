@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -32,6 +32,7 @@ import Privacy from "@/pages/Privacy";
 import Refunds from "@/pages/Refunds";
 import Contact from "@/pages/Contact";
 import PendingApproval from "@/pages/PendingApproval";
+import Welcome from "@/pages/Welcome";
 
 const queryClient = new QueryClient();
 
@@ -47,16 +48,17 @@ const RouteSpinner = () => (
 // Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, approvalStatus, approvalLoading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return <RouteSpinner />;
   }
 
   if (!user) {
-    // This domain is the mentor portal and nothing else. The marketing site
-    // moved to its own app, so the root no longer has a landing page to fall
-    // back to and a signed-out visitor belongs at the login screen wherever
-    // they arrived.
+    // The bare root gets a public page that says what this domain is. Opening
+    // straight on a password form is what Safe Browsing kept flagging as
+    // deceptive. Every deeper path still goes to the login screen.
+    if (location.pathname === "/") return <Welcome />;
     return <Navigate to="/login" replace />;
   }
 
