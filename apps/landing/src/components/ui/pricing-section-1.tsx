@@ -5,7 +5,7 @@ import { useInView } from "framer-motion";
 import { TimelineContent } from "@/components/ui/timeline-animation";
 import { VerticalCutReveal } from "@/components/ui/vertical-cut-reveal";
 import { VISOR } from "@/components/Brand";
-import { IOS_APP_URL, PRICES } from "@/lib/site";
+import { IOS_APP_URL, PAYPAL_DAYS, PAYPAL_PRICE_USD, PAYPAL_URL } from "@/lib/site";
 
 const reveal = {
   visible: (i: number) => ({
@@ -47,7 +47,7 @@ export default function PricingSection() {
   const [price, setPrice] = useState(0);
 
   useEffect(() => {
-    if (inView) setPrice(PRICES.app);
+    if (inView) setPrice(PAYPAL_PRICE_USD);
   }, [inView]);
 
   return (
@@ -93,7 +93,7 @@ export default function PricingSection() {
           customVariants={reveal}
           className="text-lg text-ink-3"
         >
-          Install, pay in Rand through PayFast, enter your licence key. No VPS bill, no auto-renewal.
+          Pay once with PayPal, install the app, enter your licence key. No VPS bill, no auto-renewal.
         </TimelineContent>
       </div>
 
@@ -141,16 +141,25 @@ export default function PricingSection() {
             Robot access
           </p>
           <div className="mt-4 flex items-baseline justify-center gap-1">
-            <span className="text-2xl font-medium text-ink-3">R</span>
+            <span className="text-2xl font-medium text-ink-3">$</span>
             <NumberFlow value={price} className="font-display text-6xl font-extrabold tracking-[-0.04em] text-ink" />
           </div>
-          <p className="mt-2 text-ink-4">per 30 days</p>
+          <p className="mt-2 text-ink-4">once off &middot; {PAYPAL_DAYS} days of access</p>
           <a
-            href={IOS_APP_URL}
+            href={PAYPAL_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="mt-8 flex h-14 w-full items-center justify-center rounded-full text-lg font-semibold text-ground transition-transform hover:scale-[1.02]"
             style={{ backgroundImage: VISOR }}
           >
-            Get started
+            Buy with PayPal
+          </a>
+          <p className="mt-3 text-[13px] leading-relaxed text-ink-4">
+            Put the email you will use in the app in the PayPal note. We switch your access on once the
+            payment is confirmed.
+          </p>
+          <a href={IOS_APP_URL} className="mt-4 inline-block text-[14px] font-medium text-cyan hover:underline">
+            Already paid? Open the app
           </a>
           <p className="mt-4 text-[13px] text-ink-4">Prices include VAT where applicable.</p>
         </TimelineContent>
