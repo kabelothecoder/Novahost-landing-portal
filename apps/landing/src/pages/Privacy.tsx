@@ -51,7 +51,7 @@ export default function Privacy() {
       </ul>
       <p>
         We do <strong>not</strong> collect your card or bank details. Payment is handled entirely by
-        PayFast; we receive only a confirmation and a reference.
+        PayPal; we receive only a confirmation, a reference and the email you give us in the payment note.
       </p>
 
       <h2>2. Why we process it, and on what basis</h2>
@@ -115,7 +115,7 @@ export default function Privacy() {
           <strong>Vercel</strong> &mdash; hosting for the provider portal and this website.
         </li>
         <li>
-          <strong>PayFast (Payfast (Pty) Ltd)</strong> &mdash; payment processing.
+          <strong>PayPal</strong> &mdash; payment processing.
         </li>
         <li>
           <strong>Our trade-copier provider</strong> &mdash; routes orders from a hosted robot to your

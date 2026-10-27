@@ -63,11 +63,12 @@ export default function Terms() {
 
       <h2>4. Payment</h2>
       <p>
-        Payments are once-off (not a subscription) and are processed by PayFast. Prices are in South
-        African Rand and are shown to you before you pay; the amount displayed at checkout is the
-        amount charged. We never see or store your card details. &ldquo;Lifetime access&rdquo; means
-        for as long as we operate the service &mdash; it is not a guarantee that the service will run
-        indefinitely (see section&nbsp;9). Refunds are governed by our{" "}
+        Payments are once-off (not a subscription) and are processed by PayPal. The price is
+        US$37 for 60&nbsp;days of access, shown to you before you pay; the amount displayed at
+        checkout is the amount charged. Access ends after those 60&nbsp;days unless you choose to
+        pay again; nothing renews automatically. We never see or store your card details. Access is
+        not a guarantee that the service will run indefinitely (see section&nbsp;9). Refunds are
+        governed by our{" "}
         <a href="/refunds">Refund Policy</a>.
       </p>
 
@@ -111,7 +112,7 @@ export default function Terms() {
       <h2>7. Third-party services</h2>
       <p>
         NovaHost depends on services we do not control &mdash; your broker and its MetaTrader server,
-        the trade-copier infrastructure that routes orders, PayFast, and the AI provider that powers
+        the trade-copier infrastructure that routes orders, PayPal, and the AI provider that powers
         the chart scanner. Their performance, availability, pricing, spreads, slippage, requotes, and
         outages are outside our control, and we are not liable for them. Your use of your broker
         account remains subject to your broker&rsquo;s own agreement with you.

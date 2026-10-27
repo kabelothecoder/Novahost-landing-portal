@@ -32,7 +32,7 @@ export const COMPANY = {
   jurisdiction: "the Republic of South Africa",
 } as const;
 
-export const LAST_UPDATED = "3 September 2026";
+export const LAST_UPDATED = "27 October 2026";
 
 const LEGAL_LINKS = [
   ["Terms of Service", "/terms"],
