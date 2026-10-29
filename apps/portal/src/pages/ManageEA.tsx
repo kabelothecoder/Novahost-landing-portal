@@ -606,12 +606,14 @@ export default function ManageEA() {
                   <Input 
                     id="custom-symbol-input"
                     placeholder="Enter custom symbol (e.g. GBPUSD)"
-                    className="bg-white/5 border-white/10 text-white text-xs font-mono uppercase"
+                    className="bg-white/5 border-white/10 text-white text-xs font-mono"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        const val = e.currentTarget.value.trim().toUpperCase();
-                        if (val && !symbols.includes(val)) {
+                        // Case is kept as typed: brokers like Deriv list "Volatility 75 Index",
+                        // and an upper-cased copy no longer matches the broker's own name.
+                        const val = e.currentTarget.value.trim();
+                        if (val && !symbols.some(s => s.toLowerCase() === val.toLowerCase())) {
                           setSymbols(prev => [...prev, val]);
                           e.currentTarget.value = "";
                         }
@@ -625,8 +627,8 @@ export default function ManageEA() {
                     onClick={() => {
                       const input = document.getElementById("custom-symbol-input") as HTMLInputElement;
                       if (input) {
-                        const val = input.value.trim().toUpperCase();
-                        if (val && !symbols.includes(val)) {
+                        const val = input.value.trim();
+                        if (val && !symbols.some(s => s.toLowerCase() === val.toLowerCase())) {
                           setSymbols(prev => [...prev, val]);
                           input.value = "";
                         }
