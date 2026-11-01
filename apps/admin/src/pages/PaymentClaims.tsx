@@ -217,6 +217,32 @@ export default function PaymentClaims() {
                   </div>
                 </dl>
 
+                {r.proofUrl ? (
+                  <a
+                    href={r.proofUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block w-fit"
+                    title="Open the full receipt"
+                  >
+                    <img
+                      src={r.proofUrl}
+                      alt={`PayPal receipt from ${r.appEmail}`}
+                      className="max-h-80 rounded-lg border object-contain"
+                    />
+                    <span className="mt-1 block text-[12px] text-muted-foreground">
+                      Tap to open full size. Check the date, amount and PayPal email.
+                    </span>
+                  </a>
+                ) : (
+                  r.status === "pending" && (
+                    <p className="flex items-start gap-1.5 text-[12.5px] text-destructive">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>No receipt screenshot. Do not approve until you have matched it in PayPal.</span>
+                    </p>
+                  )
+                )}
+
                 {(r.emailsDiffer || r.deviceConflict || r.priorApprovalsForPaypalEmail.length > 0) &&
                   r.status === "pending" && (
                     <ul className="space-y-1.5 text-[12.5px]">

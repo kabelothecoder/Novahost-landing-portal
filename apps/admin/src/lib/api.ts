@@ -416,6 +416,8 @@ export const api = {
         decidedBy: string | null;
         decisionNote: string | null;
         grantSummary: string | null;
+        /** Signed link to the receipt screenshot, valid for an hour. Null on claims filed before it was required. */
+        proofUrl: string | null;
         emailsDiffer: boolean;
         accessActive: boolean;
         accessUntil: string | null;
