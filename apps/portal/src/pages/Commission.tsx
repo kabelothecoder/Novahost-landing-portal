@@ -37,6 +37,7 @@ import {
   type AffiliateSummary,
 } from "@/lib/affiliate";
 import { cn } from "@/lib/utils";
+import { exampleSummary, isExampleMode } from "@/lib/exampleCommission";
 
 /**
  * The mentor's commission page.
@@ -103,6 +104,11 @@ export default function Commission() {
 
   const load = useCallback(async () => {
     setStatus("loading");
+    if (isExampleMode()) {
+      setData(exampleSummary());
+      setStatus("ready");
+      return;
+    }
     try {
       const res = await fetchAffiliateSummary();
       setData(res);
@@ -182,6 +188,11 @@ export default function Commission() {
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-4">
+      {isExampleMode() && (
+        <div className="rounded-lg border-2 border-amber-500 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-700 dark:text-amber-300">
+          EXAMPLE FIGURES — an illustration of what a mentor could earn. Not real earnings or payouts.
+        </div>
+      )}
       {/* ---- Where the mentor stands with the agreement ------------------- */}
       {!loading && agreementStatus !== "approved" && (
         <Alert className={cn(agreementStatus === "rejected" && "border-destructive/40")}>
