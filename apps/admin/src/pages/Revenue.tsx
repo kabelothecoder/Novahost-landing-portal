@@ -203,6 +203,44 @@ export default function Revenue() {
       </Panel>
 
       <Panel
+        title="PayPal payments"
+        description={`Approved PayPal claims, in US dollars. ${rev?.paypal?.paidCount ?? 0} sold, $${(rev?.paypal?.grossTotal ?? 0).toFixed(2)} gross.`}
+      >
+        {loading ? (
+          <TableSkeleton rows={3} cols={4} />
+        ) : !data?.paypalPayments?.length ? (
+          <Empty title="No approved PayPal payments" body="They appear here once a claim is approved." />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Approved</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>PayPal email</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead className="text-right">Gross</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.paypalPayments.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="whitespace-nowrap text-muted-foreground">{date(p.createdAt)}</TableCell>
+                    <TableCell className="max-w-[240px] truncate font-medium">{p.email}</TableCell>
+                    <TableCell className="max-w-[240px] truncate text-muted-foreground">{p.paypalEmail}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="whitespace-nowrap font-normal">{p.productLabel}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">${p.gross.toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Panel>
+
+      <Panel
         title="Every payment"
         description={`${filtered.length} of ${payments.length} shown.`}
         action={

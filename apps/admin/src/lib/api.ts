@@ -47,6 +47,23 @@ export interface RevenueSummary {
   byProduct: Array<{ product: string; label: string; count: number; gross: number }>;
   series: Array<{ month: string; gross: number; net: number; refunds: number; count: number }>;
   currency: string;
+  /** Approved PayPal claims, in USD. Absent on an older function deploy. */
+  paypal?: {
+    currency: string;
+    grossTotal: number;
+    paidCount: number;
+    series: Array<{ month: string; gross: number; count: number }>;
+  };
+}
+
+export interface PaypalPayment {
+  id: string;
+  createdAt: string;
+  email: string;
+  paypalEmail: string;
+  product: string;
+  productLabel: string;
+  gross: number;
 }
 
 export interface OverviewCounts {
@@ -344,6 +361,7 @@ export const api = {
       failed: Payment[];
       duplicates: number;
       adjustments: Adjustment[];
+      paypalPayments?: PaypalPayment[];
       liveMerchantId: string;
     }>("admin-analytics", { action: "revenue" }),
 
@@ -401,6 +419,33 @@ export const api = {
 
   accessRevoke: (email: string) =>
     call<Record<string, never>>("admin-grant-access", { action: "revoke", email }),
+
+  // ── Device moves (every move needs an admin's yes before it can be paid for)
+  deviceMovesList: (status: "pending" | "decided") =>
+    call<{
+      rows: Array<{
+        id: string;
+        email: string;
+        reason: string | null;
+        status: "pending" | "approved" | "rejected" | "cancelled";
+        targetDeviceId: string;
+        currentDeviceId: string | null;
+        licensedSince: string | null;
+        requestedAt: string;
+        decidedAt: string | null;
+        decidedBy: string | null;
+        decisionNote: string | null;
+        paid: boolean;
+        movesLastYear: number;
+        history: Array<{ event: string; at: string; note: string | null }>;
+      }>;
+    }>("admin-device-moves", { action: "list", status }),
+
+  deviceMoveApprove: (id: string, note?: string) =>
+    call<{ status: string; emailed: boolean }>("admin-device-moves", { action: "approve", id, note }),
+
+  deviceMoveReject: (id: string, note: string) =>
+    call<{ status: string; emailed: boolean }>("admin-device-moves", { action: "reject", id, note }),
 
   // ── Mentor approvals
   approvalsList: () =>
