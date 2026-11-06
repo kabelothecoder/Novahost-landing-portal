@@ -15,12 +15,14 @@ import Approvals from "@/pages/Approvals";
 import KeyRequests from "@/pages/KeyRequests";
 import Broadcast from "@/pages/Broadcast";
 import CompAccess from "@/pages/CompAccess";
+import DeviceMoves from "@/pages/DeviceMoves";
 import Directory from "@/pages/Directory";
 import Licences from "@/pages/Licences";
 import Signals from "@/pages/Signals";
 import Affiliate from "@/pages/Affiliate";
 import Agreements from "@/pages/Agreements";
 import Websites from "@/pages/Websites";
+import Costs from "@/pages/Costs";
 
 function Spinner() {
   return (
@@ -61,6 +63,7 @@ function Gate() {
           <Route path="/" element={<Overview />} />
           <Route path="/revenue" element={<Revenue />} />
           <Route path="/payments" element={<Payments />} />
+          <Route path="/costs" element={<Costs />} />
           <Route path="/payment-claims" element={<PaymentClaims />} />
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/approvals" element={<Approvals />} />
@@ -69,6 +72,7 @@ function Gate() {
           <Route path="/affiliate" element={<Affiliate />} />
           <Route path="/agreements" element={<Agreements />} />
           <Route path="/websites" element={<Websites />} />
+          <Route path="/device-moves" element={<DeviceMoves />} />
           <Route path="/comp-access" element={<CompAccess />} />
           <Route path="/directory" element={<Directory />} />
           <Route path="/licences" element={<Licences />} />
