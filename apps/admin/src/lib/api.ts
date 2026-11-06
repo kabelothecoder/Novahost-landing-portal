@@ -343,7 +343,74 @@ async function call<T>(fn: string, body: Record<string, unknown>): Promise<T> {
   return data as T;
 }
 
+// ── Costs (admin-costs) ─────────────────────────────────────────────────────
+export type CostSource = "live" | "estimate" | "manual";
+export interface CostEntry {
+  date: string;
+  provider: string;
+  description: string;
+  amount: number;
+  currency: string;
+  source: CostSource;
+}
+export interface CostProvider {
+  provider: string;
+  category: "bridge" | "infrastructure";
+  mode: "live" | "balance" | "manual" | "unconfigured" | "error";
+  note: string;
+  balance?: { amount: number; currency: string } | null;
+}
+export interface BrokerAccountCost {
+  id: string;
+  provider: "metarpc";
+  platform: string;
+  login: string;
+  server: string;
+  label: string | null;
+  status: string;
+  licenseKey: string | null;
+  ownerEmail: string | null;
+  mentorId: string | null;
+  connectedAt: string;
+  disconnectedAt: string | null;
+  liveHours: number;
+  balance: { amount: number | null; currency: string | null; error?: string } | null;
+  cost: { amount: number; currency: string; source: CostSource } | null;
+}
+export interface MentorCost {
+  mentorId: string | null;
+  name: string;
+  accounts: number;
+  live: number;
+  hours: number;
+  costUsd: number;
+}
+export interface ManualCost {
+  id: string;
+  incurredOn: string;
+  provider: string;
+  category: "bridge" | "infrastructure" | "other";
+  description: string;
+  amount: number;
+  currency: "ZAR" | "USD" | "EUR";
+  createdAt: string;
+}
+
 export const api = {
+  costs: () =>
+    call<{
+      accounts: BrokerAccountCost[];
+      providers: CostProvider[];
+      entries: CostEntry[];
+      manual: ManualCost[];
+      mentors: MentorCost[];
+    }>("admin-costs", { action: "summary" }),
+
+  createCost: (input: Omit<ManualCost, "id" | "createdAt">) =>
+    call<Record<string, never>>("admin-costs", { action: "cost.create", ...input }),
+
+  deleteCost: (id: string) => call<Record<string, never>>("admin-costs", { action: "cost.delete", id }),
+
   overview: () =>
     call<{
       revenue: RevenueSummary;

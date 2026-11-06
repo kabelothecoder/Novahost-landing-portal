@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   BadgeCheck,
   Banknote,
+  Receipt,
   CreditCard,
   FileSignature,
   Gift,
@@ -17,6 +18,7 @@ import {
   PackagePlus,
   Percent,
   Radio,
+  Smartphone,
   Sun,
   UserCheck,
   Users,
@@ -52,6 +54,7 @@ const NAV: NavGroup[] = [
       { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
       { to: "/revenue", label: "Revenue", icon: Banknote },
       { to: "/payments", label: "Payments & refunds", icon: CreditCard },
+      { to: "/costs", label: "Costs", icon: Receipt },
     ],
   },
   {
@@ -68,6 +71,7 @@ const NAV: NavGroup[] = [
       { to: "/subscriptions", label: "Subscriptions", icon: BadgeCheck },
       { to: "/approvals", label: "Mentor approvals", icon: UserCheck },
       { to: "/key-requests", label: "Key requests", icon: PackagePlus },
+      { to: "/device-moves", label: "Device moves", icon: Smartphone },
       { to: "/comp-access", label: "Comp access", icon: Gift },
       { to: "/directory", label: "Directory", icon: Users },
       { to: "/broadcast", label: "Broadcast", icon: Mail },

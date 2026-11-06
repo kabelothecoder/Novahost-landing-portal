@@ -242,8 +242,8 @@ export default function Affiliate() {
             <strong className="font-medium text-foreground">
               {totals!.unattributedPayments} payments totalling {money(totals!.unattributedRevenue)}
             </strong>{" "}
-            carry no licence key, so no mentor can be credited for them. These are almost all from
-            before the checkout started requiring the key. They are excluded from every figure on
+            can&rsquo;t be credited to any mentor: no licence key was sent with the payment, and the
+            phone that paid has no licence activated on it. They are left out of every figure on
             this page rather than guessed at.
           </p>
         </div>
