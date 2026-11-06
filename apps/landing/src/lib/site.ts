@@ -44,4 +44,16 @@ export const PRICES = {
   deviceMove: 150,
 } as const;
 
+/**
+ * The hosted PayPal Pay Now link the Buy button opens. PayPal sends no
+ * callback, so access is switched on by hand once the payment is seen. Same
+ * `||` rule as above: an unset or blank override falls through to the default.
+ */
+export const PAYPAL_URL =
+  import.meta.env.VITE_PAYPAL_PAY_URL || "https://www.paypal.com/ncp/payment/WLPUNY3FLK4Y4";
+
+/** What that link charges: US dollars, once off, for this many days of access. */
+export const PAYPAL_PRICE_USD = 37;
+export const PAYPAL_DAYS = 60;
+
 export const SUPPORT_EMAIL = "kabelomzwakhe@gmail.com";

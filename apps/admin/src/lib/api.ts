@@ -514,6 +514,51 @@ export const api = {
   deviceMoveReject: (id: string, note: string) =>
     call<{ status: string; emailed: boolean }>("admin-device-moves", { action: "reject", id, note }),
 
+  // ── Payment claims ("I've paid" for the hosted PayPal links) and phone alerts
+  paymentClaimsList: (status: "pending" | "decided") =>
+    call<{
+      rows: Array<{
+        id: string;
+        appEmail: string;
+        paypalEmail: string;
+        product: "APP" | "SCANS";
+        status: "pending" | "approved" | "rejected";
+        requestedAt: string;
+        decidedAt: string | null;
+        decidedBy: string | null;
+        decisionNote: string | null;
+        grantSummary: string | null;
+        /** Signed link to the receipt screenshot, valid for an hour. Null on claims filed before it was required. */
+        proofUrl: string | null;
+        emailsDiffer: boolean;
+        accessActive: boolean;
+        accessUntil: string | null;
+        scanCredits: number;
+        deviceConflict: boolean;
+        priorApprovalsForPaypalEmail: Array<{ appEmail: string; product: string; at: string | null }>;
+      }>;
+    }>("admin-payment-claims", { action: "list", status }),
+
+  paymentClaimApprove: (id: string) =>
+    call<{ summary: string | null; warning: string | null; emailed: boolean }>(
+      "admin-payment-claims",
+      { action: "approve", id },
+    ),
+
+  paymentClaimReject: (id: string, note: string) =>
+    call<{ emailed: boolean }>("admin-payment-claims", { action: "reject", id, note }),
+
+  pushConfig: () => call<{ publicKey: string }>("admin-payment-claims", { action: "push_config" }),
+
+  pushSubscribe: (subscription: unknown) =>
+    call<Record<string, never>>("admin-payment-claims", { action: "push_subscribe", subscription }),
+
+  pushUnsubscribe: (subscription: unknown) =>
+    call<Record<string, never>>("admin-payment-claims", { action: "push_unsubscribe", subscription }),
+
+  pushTest: (subscription: unknown) =>
+    call<Record<string, never>>("admin-payment-claims", { action: "push_test", subscription }),
+
   // ── Mentor approvals
   approvalsList: () =>
     call<{

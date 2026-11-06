@@ -81,12 +81,12 @@ export default function Refunds() {
       </p>
       <ul>
         <li>the email address you used to pay;</li>
-        <li>your PayFast payment reference or a copy of the payment confirmation;</li>
+        <li>your PayPal transaction ID or a copy of the payment confirmation;</li>
         <li>which product you are asking about, and a short description of the problem.</li>
       </ul>
       <p>
         We aim to respond within 3&nbsp;business days. Approved refunds are made to the original
-        payment method through PayFast, normally within 5&ndash;10&nbsp;business days of approval,
+        payment method through PayPal, normally within 5&ndash;10&nbsp;business days of approval,
         depending on your bank.
       </p>
 

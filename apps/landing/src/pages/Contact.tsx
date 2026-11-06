@@ -19,7 +19,7 @@ export default function Contact() {
       <ul>
         <li>the email address linked to your licence or payment;</li>
         <li>
-          your PayFast payment reference (for anything about billing, delivery of a key, or a refund);
+          your PayPal transaction ID (for anything about billing, delivery of a key, or a refund);
         </li>
         <li>
           the make and model of your phone, and what you were doing when the problem happened (for

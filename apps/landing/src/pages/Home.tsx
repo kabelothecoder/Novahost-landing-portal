@@ -26,7 +26,7 @@ import { CinematicHero } from "@/components/ui/cinematic-landing-hero";
 import PricingSection from "@/components/ui/pricing-section-1";
 import { Header } from "@/components/Header";
 import { Reveal } from "@/components/Reveal";
-import { PRICES } from "@/lib/site";
+import { PAYPAL_DAYS, PAYPAL_PRICE_USD } from "@/lib/site";
 
 // ─── Content ─────────────────────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ import { PRICES } from "@/lib/site";
  */
 const COMPARISON = [
   ["Somewhere to run it", "A PC left on, or a rented VPS", "Nothing. We run it for you"],
-  ["What it costs to keep running", "Electricity, or ~$15 a month for a VPS", "R"+PRICES.app+" per 30 days, hosting included"],
+  ["What it costs to keep running", "Electricity, or ~$15 a month for a VPS", "$" + PAYPAL_PRICE_USD + " once off for " + PAYPAL_DAYS + " days, hosting included"],
   ["When your machine is off", "The bot stops trading", "The bot keeps trading"],
   ["Setting it up", "Install MetaTrader, attach the EA, tune it", "Enter a key, connect your broker"],
   ["Watching it", "Remote desktop into the VPS", "Open the app"],
@@ -50,7 +50,7 @@ const STEPS = [
   {
     n: "01",
     title: "Get the app",
-    body: "Open the app in your phone's browser — iPhone or Android — and add it to your home screen. No App Store, no Play Store. Pay in Rand through PayFast for 30 days of access.",
+    body: "Open the app in your phone's browser — iPhone or Android — and add it to your home screen. No App Store, no Play Store. Pay once with PayPal for 60 days of access.",
   },
   {
     n: "02",
@@ -170,7 +170,7 @@ const FAQ = [
   },
   {
     q: "Is this a subscription?",
-    a: "No auto-billing. You pay R" + PRICES.app + " for 30 days of access, and renew from the app only if you want to. No billing token is left sitting against your card.",
+    a: "No auto-billing. You pay $" + PAYPAL_PRICE_USD + " once for " + PAYPAL_DAYS + " days of access, and pay again only if you want more. No billing token is left sitting against your card.",
   },
   {
     q: "Which brokers work?",

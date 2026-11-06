@@ -91,3 +91,13 @@ createRoot(document.getElementById("root")!).render(
     {missingConfig.length > 0 ? <ConfigurationNeeded missing={missingConfig} /> : <App />}
   </StrictMode>,
 );
+
+// The worker only shows notifications; it caches nothing. Production only, so a
+// dev server never ends up behind a worker.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((err) => {
+      console.error("Service worker registration failed:", err);
+    });
+  });
+}

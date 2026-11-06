@@ -9,6 +9,7 @@ import Login from "@/pages/Login";
 import Overview from "@/pages/Overview";
 import Revenue from "@/pages/Revenue";
 import Payments from "@/pages/Payments";
+import PaymentClaims from "@/pages/PaymentClaims";
 import Subscriptions from "@/pages/Subscriptions";
 import Approvals from "@/pages/Approvals";
 import KeyRequests from "@/pages/KeyRequests";
@@ -63,6 +64,7 @@ function Gate() {
           <Route path="/revenue" element={<Revenue />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/costs" element={<Costs />} />
+          <Route path="/payment-claims" element={<PaymentClaims />} />
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/approvals" element={<Approvals />} />
           <Route path="/key-requests" element={<KeyRequests />} />

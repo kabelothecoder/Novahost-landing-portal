@@ -9,6 +9,7 @@ import {
   FileSignature,
   Gift,
   Globe,
+  HandCoins,
   KeyRound,
   LayoutDashboard,
   LogOut,
@@ -55,6 +56,7 @@ const NAV: NavGroup[] = [
       { to: "/revenue", label: "Revenue", icon: Banknote },
       { to: "/payments", label: "Payments & refunds", icon: CreditCard },
       { to: "/costs", label: "Costs", icon: Receipt },
+      { to: "/payment-claims", label: "Payment claims", icon: HandCoins },
     ],
   },
   {
