@@ -50,12 +50,16 @@ function downloadCsv(filename: string, csv: string) {
   URL.revokeObjectURL(url);
 }
 
+const usd = (n: number) => `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+
 export default function Revenue() {
   const { data, error, loading, reload } = useAsync(() => api.revenue(), []);
   const [query, setQuery] = useState("");
 
   const payments = data?.payments ?? [];
   const rev = data?.revenue;
+  const pp = rev?.paypal;
+  const ppMonth = pp?.series.find((s) => s.month === new Date().toISOString().slice(0, 7));
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -91,26 +95,10 @@ export default function Revenue() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat loading={loading} label="Gross" value={money(rev?.grossTotal ?? 0, true)} />
-        <Stat
-          loading={loading}
-          label="Net from PayFast"
-          value={money(rev?.netTotal ?? 0, true)}
-          hint={`Less ${money(rev?.feeTotal ?? 0, true)} in fees`}
-        />
-        <Stat
-          loading={loading}
-          label="Refunded"
-          value={money(rev?.refundTotal ?? 0, true)}
-          tone={rev && rev.refundTotal > 0 ? "warn" : "default"}
-        />
-        <Stat
-          loading={loading}
-          label="Realised"
-          value={money(rev?.realisedTotal ?? 0, true)}
-          tone="good"
-          hint="What the business kept"
-        />
+        <Stat loading={loading} label="PayPal revenue" value={usd(pp?.grossTotal ?? 0)} hint="Approved claims, USD" tone="good" />
+        <Stat loading={loading} label="PayPal sales" value={String(pp?.paidCount ?? 0)} hint="Approved claims" />
+        <Stat loading={loading} label="This month" value={usd(ppMonth?.gross ?? 0)} hint={`${ppMonth?.count ?? 0} sales`} />
+        <Stat loading={loading} label="Average sale" value={usd(pp && pp.paidCount ? pp.grossTotal / pp.paidCount : 0)} />
       </div>
 
       <Panel title="Gross and net by month">

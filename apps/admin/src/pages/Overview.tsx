@@ -34,6 +34,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+const usd = (n: number) => `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+
 export default function Overview() {
   const { data, error, loading, reload } = useAsync(() => api.overview(), []);
 
@@ -41,12 +43,14 @@ export default function Overview() {
 
   const rev = data?.revenue;
   const c = data?.counts;
+  const pp = rev?.paypal;
+  const ppMonth = pp?.series.find((s) => s.month === new Date().toISOString().slice(0, 7));
 
   const chartData =
-    rev?.series.map((s) => ({
+    pp?.series.map((s) => ({
       month: monthLabel(s.month),
       gross: Math.round(s.gross),
-      refunds: Math.round(s.refunds),
+      refunds: 0,
     })) ?? [];
 
   return (
@@ -61,39 +65,12 @@ export default function Overview() {
         </Button>
       </div>
 
-      {/* ── Money ── */}
+      {/* ── Money: PayPal is the live checkout; approved claims are its only record ── */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat
-          loading={loading}
-          label="Gross revenue"
-          value={money(rev?.grossTotal ?? 0, true)}
-          hint={`${rev?.paidCount ?? 0} completed payments`}
-          icon={Banknote}
-        />
-        <Stat
-          loading={loading}
-          label="Realised"
-          value={money(rev?.realisedTotal ?? 0, true)}
-          hint="After PayFast fees and refunds"
-          tone="good"
-        />
-        <Stat
-          loading={loading}
-          label="Fees paid"
-          value={money(rev?.feeTotal ?? 0, true)}
-          hint={
-            rev && rev.grossTotal > 0
-              ? `${percent(rev.feeTotal / rev.grossTotal)} of gross`
-              : undefined
-          }
-        />
-        <Stat
-          loading={loading}
-          label="Refunded"
-          value={money(rev?.refundTotal ?? 0, true)}
-          tone={rev && rev.refundTotal > 0 ? "warn" : "default"}
-          hint={rev?.refundTotal ? "Recorded adjustments" : "Nothing given back yet"}
-        />
+        <Stat loading={loading} label="PayPal revenue" value={usd(pp?.grossTotal ?? 0)} hint="Approved claims, USD" icon={Banknote} tone="good" />
+        <Stat loading={loading} label="PayPal sales" value={String(pp?.paidCount ?? 0)} hint="Approved claims" />
+        <Stat loading={loading} label="This month" value={usd(ppMonth?.gross ?? 0)} hint={`${ppMonth?.count ?? 0} sales`} />
+        <Stat loading={loading} label="Average sale" value={usd(pp && pp.paidCount ? pp.grossTotal / pp.paidCount : 0)} />
       </div>
 
       {/* Anything that would quietly distort the numbers above says so here
@@ -126,14 +103,14 @@ export default function Overview() {
       {/* ── Revenue by month ── */}
       <Panel
         title="Revenue by month"
-        description="Gross received, with refunds shown against the month they were recorded."
+        description="Approved PayPal sales, in US dollars."
       >
         {loading ? (
           <TableSkeleton rows={4} cols={1} />
         ) : chartData.length === 0 ? (
           <Empty
             title="No payments yet"
-            body="Once a live PayFast payment completes it appears here. Sandbox tests are excluded."
+            body="Approved PayPal claims appear here."
           />
         ) : (
           <div className="h-[260px] w-full">
@@ -153,7 +130,7 @@ export default function Overview() {
                   width={60}
                   className="text-[11px]"
                   stroke="currentColor"
-                  tickFormatter={(v: number) => `R${v}`}
+                  tickFormatter={(v: number) => `$${v}`}
                 />
                 <Tooltip
                   cursor={{ fill: "hsl(var(--muted))" }}
@@ -164,7 +141,7 @@ export default function Overview() {
                     fontSize: 12,
                     color: "hsl(var(--popover-foreground))",
                   }}
-                  formatter={(v: number, name: string) => [money(v, true), name]}
+                  formatter={(v: number, name: string) => [usd(v), name]}
                 />
                 <Bar dataKey="gross" name="Gross" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 {chartData.some((d) => d.refunds > 0) && (
